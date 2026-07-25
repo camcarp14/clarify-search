@@ -192,22 +192,18 @@
     }
 
 
-    /* ---- dark UI mocks on a light page ---- */
+    /* ---- UI mocks: white panels, brighter than the bone page ----
+       They contrast by being lighter than the ground plus a crisp border and
+       lift, the way a real light-mode product screenshot does. Accents inherit
+       the earthy root tokens. --surface/--line are re-pointed so the subtle
+       inset rows inside them stay visible against white. */
     .instrument, .serp, .mock {
-      --ink: #f4f2ea;
-      --muted: #a7a396;
-      --muted-2: #7d786c;
-      --line: rgba(255,255,255,.08);
-      --line-strong: rgba(255,255,255,.16);
-      --surface: rgba(255,255,255,.04);
-      --surface-strong: #12100d;
-      --tint-rgb: 255,255,255;
-      --bg: #12100d;
-      --amber: #f0a93b; --amber-soft: #f7ca7d; --amber-rgb: 240,169,59;
-      --mint: #4fd694;  --mint-soft: #96e9c0;  --mint-rgb: 79,214,148;
-      --iris: #9a8cff;  --iris-soft: #c4bcff;  --iris-rgb: 154,140,255;
+      --bg: #fffdf8;
+      --surface: rgba(47,40,30,.035);
+      --line: rgba(47,40,30,.10);
+      --line-strong: rgba(47,40,30,.2);
       color: var(--ink);
-      background-color: #12100d;
+      background-color: #fffdf8;
     }
 
     /* ============ ambient field ============
@@ -499,7 +495,7 @@
     .inst-tabs {
       display: inline-flex; gap: 3px; padding: 3px;
       border: 1px solid var(--line-strong); border-radius: 999px;
-      background: rgba(0,0,0,.3);
+      background: rgba(var(--tint-rgb),.05);
     }
     .inst-tab {
       border: 0; cursor: pointer; border-radius: 999px;
@@ -522,7 +518,7 @@
     .inst-score { display: grid; grid-template-columns: 118px 1fr; gap: 22px; align-items: center; margin-bottom: 20px; }
     .ring { position: relative; width: 118px; height: 118px; }
     .ring svg { display: block; width: 118px; height: 118px; }
-    .ring-track { fill: none; stroke: rgba(255,255,255,.08); stroke-width: 9; }
+    .ring-track { fill: none; stroke: rgba(47,40,30,.12); stroke-width: 9; }
     .ring-fill {
       fill: none; stroke: url(#ringGrad); stroke-width: 9; stroke-linecap: round;
       stroke-dasharray: 326.73; stroke-dashoffset: 326.73;
@@ -554,8 +550,8 @@
     .inst-rows { list-style: none; padding: 0; display: grid; gap: 12px; }
     .score-row {
       display: grid; gap: 7px; padding: 13px 16px;
-      border: 1px solid rgba(255,255,255,.07); border-radius: 14px;
-      background: rgba(255,255,255,.02);
+      border: 1px solid rgba(var(--tint-rgb),.11); border-radius: 14px;
+      background: rgba(var(--tint-rgb),.03);
     }
     .score-row-top { display: flex; align-items: center; gap: 10px; }
     .score-row-title { font-size: 13.5px; font-weight: 600; flex: 1; }
@@ -563,7 +559,7 @@
     .score-row-value.fair { color: var(--amber-soft); }
     .score-row-value.poor { color: var(--red); }
     .score-row-value.good { color: var(--mint-soft); }
-    .score-bar { height: 4px; border-radius: 99px; background: rgba(255,255,255,.07); overflow: hidden; }
+    .score-bar { height: 4px; border-radius: 99px; background: rgba(var(--tint-rgb),.1); overflow: hidden; }
     .score-bar span {
       display: block; height: 100%; width: var(--w); border-radius: 99px;
       transform: scaleX(0); transform-origin: 0 50%;
@@ -690,21 +686,21 @@
     /* a results page, drawn rather than described — the AI answer sits on top,
        ads under it, rankings under that, all feeding the answer */
     .serp {
-      border: 1px solid rgba(255,255,255,.1); border-radius: 16px; overflow: hidden;
-      background: linear-gradient(180deg, rgba(154,140,255,.11), rgba(154,140,255,0) 60%), #12100d;
+      border: 1px solid rgba(var(--tint-rgb),.14); border-radius: 16px; overflow: hidden;
+      background: linear-gradient(180deg, rgba(var(--iris-rgb),.06), rgba(var(--iris-rgb),0) 58%), #fffdf8;
       display: grid; align-content: start;
     }
     .serp-bar {
       display: flex; align-items: center; gap: 12px;
-      padding: 11px 14px; border-bottom: 1px solid rgba(255,255,255,.08);
-      background: rgba(0,0,0,.3);
+      padding: 11px 14px; border-bottom: 1px solid rgba(var(--tint-rgb),.11);
+      background: rgba(var(--tint-rgb),.04);
     }
     .serp-dots { display: flex; gap: 5px; }
-    .serp-dots i { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,.13); }
+    .serp-dots i { width: 8px; height: 8px; border-radius: 50%; background: rgba(var(--tint-rgb),.16); }
     .serp-q {
       display: inline-flex; align-items: center; gap: 7px; flex: 1;
       padding: 6px 12px; border-radius: 999px;
-      border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.04);
+      border: 1px solid rgba(var(--tint-rgb),.14); background: rgba(var(--tint-rgb),.03);
       font-family: var(--font-mono); font-size: 10.5px; color: var(--muted);
     }
     .serp-q svg { opacity: .5; flex-shrink: 0; }
@@ -712,7 +708,7 @@
     .serp-row {
       position: relative; display: grid; gap: 7px;
       padding: 15px 16px 15px 20px;
-      border-bottom: 1px solid rgba(255,255,255,.055);
+      border-bottom: 1px solid rgba(var(--tint-rgb),.08);
     }
     .serp-row:last-child { border-bottom: 0; }
     .serp-row::before {
@@ -748,7 +744,7 @@
     }
     .serp-url { font-family: var(--font-mono); font-size: 10px; color: var(--muted-2); }
     .serp-title { height: 9px; width: 58%; border-radius: 99px; background: var(--row-acc); opacity: .8; }
-    .serp-line { height: 5px; width: var(--w, 80%); border-radius: 99px; background: rgba(244,242,234,.12); }
+    .serp-line { height: 5px; width: var(--w, 80%); border-radius: 99px; background: rgba(var(--tint-rgb),.13); }
     .serp-note {
       margin-top: 3px; font-size: 11.5px; line-height: 1.45; color: var(--muted-2);
     }
@@ -813,7 +809,7 @@
       padding: 4px 9px; border-radius: 999px; white-space: nowrap;
     }
     .step-tier.t-free { color: var(--mint-soft); border: 1px solid rgba(var(--mint-rgb),.42); background: rgba(var(--mint-rgb),.09); }
-    .step-tier.t-paid { color: var(--muted); border: 1px solid var(--line-strong); background: rgba(255,255,255,.04); }
+    .step-tier.t-paid { color: var(--muted); border: 1px solid var(--line-strong); background: rgba(255,255,255,.8); }
 
     /* ============ pricing ============ */
     #pricing { --acc: var(--amber); --acc-soft: var(--amber-soft); --acc-rgb: var(--amber-rgb); }
@@ -877,7 +873,7 @@
     /* cursor spotlight — Aceternity-style, toned down (desktop only, JS-gated) */
     .spot::after {
       content: ""; position: absolute; inset: 0; border-radius: inherit;
-      background: radial-gradient(260px circle at var(--mx, 50%) var(--my, 50%), rgba(var(--acc-rgb, 244,242,234), .07), transparent 65%);
+      background: radial-gradient(260px circle at var(--mx, 50%) var(--my, 50%), rgba(var(--acc-rgb, 47,40,30), .07), transparent 65%);
       opacity: 0; transition: opacity .3s ease; pointer-events: none;
     }
     .spot:hover::after { opacity: 1; }
@@ -1056,16 +1052,16 @@
     .mock {
       margin: 26px 0 0; border-radius: 20px; overflow: hidden;
       border: 1px solid rgba(var(--iris-rgb), .3);
-      background: linear-gradient(180deg, rgba(154,140,255,.13), rgba(154,140,255,0) 62%), #12100d;
+      background: linear-gradient(180deg, rgba(var(--iris-rgb),.07), rgba(var(--iris-rgb),0) 60%), #fffdf8;
       box-shadow: 0 24px 60px rgba(var(--tint-rgb),.18);
     }
     .mock-bar {
       display: flex; align-items: center; gap: 14px;
-      padding: 13px 18px; border-bottom: 1px solid rgba(255,255,255,.08);
-      background: rgba(0,0,0,.28);
+      padding: 13px 18px; border-bottom: 1px solid rgba(var(--tint-rgb),.11);
+      background: rgba(var(--tint-rgb),.04);
     }
     .mock-dots { display: flex; gap: 6px; }
-    .mock-dots i { width: 9px; height: 9px; border-radius: 50%; background: rgba(255,255,255,.14); }
+    .mock-dots i { width: 9px; height: 9px; border-radius: 50%; background: rgba(var(--tint-rgb),.16); }
     .mock-title { font-family: var(--font-mono); font-size: 11px; letter-spacing: .08em; color: var(--muted); }
     .mock-live {
       margin-left: auto; display: inline-flex; align-items: center; gap: 6px;
@@ -1087,7 +1083,7 @@
     }
     .mk-left {
       padding: 24px; display: grid; align-content: start; gap: 4px;
-      border-right: 1px solid rgba(255,255,255,.07);
+      border-right: 1px solid rgba(var(--tint-rgb),.1);
       background: linear-gradient(180deg, rgba(var(--iris-rgb), .07), transparent 70%);
     }
     .mk-label {
@@ -1118,7 +1114,7 @@
     .mk-chips { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
     .mk-chip {
       padding: 13px 14px; border-radius: 12px;
-      border: 1px solid rgba(255,255,255,.08); background: rgba(255,255,255,.03);
+      border: 1px solid rgba(var(--tint-rgb),.12); background: rgba(var(--tint-rgb),.03);
     }
     .mk-chip b {
       font-family: var(--font-display); font-size: 24px; font-weight: 700;
@@ -1149,7 +1145,7 @@
       animation: feedIn .55s var(--e-out) both;
     }
     @keyframes feedIn { from { opacity: 0; transform: translateY(-8px); } }
-    .mk-feed li:nth-child(odd) { background: rgba(255,255,255,.022); }
+    .mk-feed li:nth-child(odd) { background: rgba(var(--tint-rgb),.035); }
     .mf-t { font-family: var(--font-mono); font-size: 10.5px; color: var(--muted-2); }
     .mf-d { min-width: 0; }
     .mf-d b { color: var(--ink); font-weight: 600; }
@@ -1163,7 +1159,7 @@
 
     @media (max-width: 900px) {
       .mock-grid { grid-template-columns: 1fr; }
-      .mk-left { border-right: 0; border-bottom: 1px solid rgba(255,255,255,.07); }
+      .mk-left { border-right: 0; border-bottom: 1px solid rgba(var(--tint-rgb),.1); }
       .mk-feed li { grid-template-columns: auto 1fr; row-gap: 6px; }
       .mf-tag { grid-column: 2; justify-self: start; }
     }
@@ -1176,7 +1172,7 @@
 
     .mock-cap {
       padding: 14px 22px 18px; font-size: 12.5px; line-height: 1.6;
-      color: var(--muted-2); border-top: 1px solid rgba(255,255,255,.06);
+      color: var(--muted-2); border-top: 1px solid rgba(var(--tint-rgb),.09);
     }
     .mock-cap strong { color: var(--muted); }
     @media (max-width: 760px) { .mock-title { font-size: 10px; } }

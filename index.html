@@ -184,6 +184,55 @@
       overflow-x: hidden;
     }
 
+    /* ============ ambient field ============
+       Below the hero the page used to be flat black. This sits behind
+       everything: a faint measurement grid (the brand is precision) and three
+       very slow drifting colour fields — amber, mint, iris, one per practice.
+       Opacities are deliberately near the floor. If you notice it moving while
+       reading, it is turned up too far. */
+    #ambient {
+      position: fixed; inset: 0; z-index: -1; pointer-events: none;
+      overflow: hidden;
+    }
+    #ambient::before {
+      content: "";
+      position: absolute; inset: -1px;
+      background-image:
+        linear-gradient(rgba(255,255,255,.028) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.028) 1px, transparent 1px);
+      background-size: 88px 88px;
+      /* fade the grid out at the edges so it reads as texture, not a table */
+      -webkit-mask-image: radial-gradient(120% 80% at 50% 30%, #000 30%, transparent 78%);
+      mask-image: radial-gradient(120% 80% at 50% 30%, #000 30%, transparent 78%);
+    }
+    .amb {
+      position: absolute; border-radius: 50%;
+      will-change: transform;
+    }
+    /* radial-gradient rather than filter: blur() — same softness, far cheaper
+       to composite across a full-viewport fixed layer */
+    .amb-a {
+      width: 58vw; height: 58vw; min-width: 460px; min-height: 460px;
+      top: -14vw; left: -10vw;
+      background: radial-gradient(circle, rgba(240,169,59,.10), transparent 66%);
+      animation: float1 46s ease-in-out infinite alternate;
+    }
+    .amb-b {
+      width: 62vw; height: 62vw; min-width: 480px; min-height: 480px;
+      top: 22vh; right: -16vw;
+      background: radial-gradient(circle, rgba(79,214,148,.09), transparent 66%);
+      animation: float2 58s ease-in-out infinite alternate;
+    }
+    .amb-c {
+      width: 54vw; height: 54vw; min-width: 420px; min-height: 420px;
+      bottom: -18vw; left: 24vw;
+      background: radial-gradient(circle, rgba(154,140,255,.085), transparent 66%);
+      animation: float3 52s ease-in-out infinite alternate;
+    }
+    @keyframes float1 { to { transform: translate3d(9vw, 7vh, 0) scale(1.14); } }
+    @keyframes float2 { to { transform: translate3d(-11vw, -6vh, 0) scale(1.1); } }
+    @keyframes float3 { to { transform: translate3d(7vw, -9vh, 0) scale(1.16); } }
+
     /* film grain — Codrops-style texture, static and quiet */
     body::after {
       content: "";
@@ -1399,6 +1448,7 @@
       #progress { display: none; }
       .mag { transform: none !important; }
       .ring-fill, .score-bar span, .seg-thumb, .faq-body { transition: none; }
+      .amb-a, .amb-b, .amb-c,
       .instrument.in .inst-scan, .orb-a, .orb-b, .marquee-track,
       .offer.featured::before, .price.swap .number, .price.swap .period,
       .feature-list li.fl-in, .save-pill { animation: none; }
@@ -1554,6 +1604,7 @@
   </style>
 </head>
 <body>
+  <div id="ambient" aria-hidden="true"><i class="amb amb-a"></i><i class="amb amb-b"></i><i class="amb amb-c"></i></div>
   <div id="progress" aria-hidden="true"></div>
   <a class="skip-link" href="#main">Skip to content</a>
 
@@ -1803,7 +1854,7 @@
             <span class="mono-label">The third surface — included, not sold</span>
             <h2>The surface you <span class="ital">can't buy your way onto</span>.</h2>
           </div>
-          <p>AI Overviews, AI Mode, ChatGPT and Perplexity now answer before the links load. There's no slot to bid on and no ranking to climb — models cite what they can parse and trust, which your paid and organic work already builds. So it's included in both, never a fourth line item.</p>
+          <p>AI Overviews, AI Mode, ChatGPT and Perplexity answer before the links load. No slot to bid on, no ranking to climb — models cite what they can parse and trust, which your search work already builds. Included in both, never a fourth line item.</p>
         </div>
 
         <div class="ai-grid reveal stagger">
@@ -1877,7 +1928,7 @@
             <span class="mono-label">Method</span>
             <h2>Four steps. Every one leaves an <span class="ital">artifact</span>.</h2>
           </div>
-          <p>No six-week onboarding. Each step hands you something durable, whether or not you spend another dollar with Clarify. <strong>The free leak check is steps 01 and 02</strong> — you can stop there and owe nothing.</p>
+          <p>No six-week onboarding. Every step leaves you something durable. <strong>The free check is steps 01 and 02</strong> — stop there and owe nothing.</p>
         </div>
 
         <div class="method-grid reveal stagger">
@@ -1892,7 +1943,7 @@
             <div class="step-number">02</div>
             <span class="step-tier t-free">Where free stops</span>
             <h3>Get a scored diagnosis.</h3>
-            <p>Free gets you three checks and one number on a single channel. The audit scores every channel you choose, like the sample above — including how ready you are to be cited in AI answers.</p>
+            <p>Free gets three checks and one number on a single channel. The audit scores every channel you choose — including how ready you are to be cited in AI answers.</p>
             <div class="artifact"><span>▪</span>ARTIFACT: SCORECARD, THEN FULL REPORT</div>
           </article>
           <article class="step">
@@ -2041,14 +2092,14 @@
               </tbody>
             </table>
           </div>
-          <p class="compare-note">Prices follow the channel you picked above. Nothing here is a bundle — each rung stands alone, and the Leak Check never gets re-billed inside the audit.</p>
+          <p class="compare-note">Every tier stands alone. Nothing here is a bundle.</p>
         </div>
 
         <div class="software-block reveal" id="software">
           <div class="sw-head">
             <span class="sw-kicker">Or run it yourself</span>
             <h3>The same leak detection, <span class="ital">as software</span>.</h3>
-            <p>Clarify's monitor watches your Google Ads account and flags waste, tracking breaks and query drift as they appear. You bring the judgment and make the calls — a long way from flying blind, and honestly not the same as someone doing the work for you.</p>
+            <p>Watches your Google Ads account and flags waste, tracking breaks and query drift as they appear. You make the calls.</p>
           </div>
           <div class="sw-price">
             <span class="sw-amount"><span class="sw-cur">$</span>149<em>/mo</em></span>
@@ -2059,7 +2110,7 @@
           </div>
         </div>
 
-        <p class="pricing-fineprint">The leak check suits accounts spending around $1,500+/mo, or sites with organic traffic worth defending. Dashboards from $299. You own the code and the data.</p>
+        <p class="pricing-fineprint">Best fit: around $1,500+/mo in ad spend, or organic traffic worth defending. Dashboards from $299 — you own the code and the data.</p>
       </div>
     </section>
 
@@ -2148,7 +2199,6 @@
           </div>
         </div>
 
-        <p class="build-honest">Worth saying plainly: this is newer ground than the search practice, and it is priced per build rather than off a menu. What carries over is the method — read-only access first, a written diagnosis, a fixed scope, and you owning whatever gets built.</p>
       </div>
     </section>
 
@@ -2158,7 +2208,7 @@
         <div class="why-copy reveal">
           <span class="mono-label">Why Clarify</span>
           <h2>Senior search thinking, minus the <span class="ital">agency wrapper</span>.</h2>
-          <p>You work with the person actually reviewing your account, writing the findings, and making the changes. No handoffs, no junior analyst behind a polished deck, no bundled "growth" services.</p>
+          <p>You work with the person reviewing your account, writing the findings, and making the changes. No handoffs, no junior analyst behind a polished deck.</p>
           <div class="pill-row">
             <span class="pill p-paid">Google Ads</span>
             <span class="pill p-paid">Performance Max</span>
@@ -2193,39 +2243,39 @@
         <div class="faq-list reveal stagger">
           <details class="faq oa" open>
             <summary>Is the free leak check actually free?</summary>
-            <div class="faq-body"><div><p>Yes — no card, no call, no trial that quietly becomes a bill. It is capped at five a week because one person does the work, and it covers one channel so it stays a twenty-minute job. You get a one-page scorecard and a short walkthrough, and you keep them whether or not you ever buy anything. What it does not include is the fix list, the roadmap, or the campaign-by-campaign scoring — that genuinely takes a day, which is what the $299 audit is. The free check tells you whether you are leaking and roughly how much; the audit tells you where it comes from and what to fix first.</p></div></div>
+            <div class="faq-body"><div><p>Yes. No card, no call, no trial that becomes a bill. One channel, five a week, and the scorecard is yours either way. It tells you <strong>whether</strong> you're leaking and roughly how much — the audit tells you where it's coming from and what to fix first.</p></div></div>
           </details>
           <details class="faq">
             <summary>Do I have to do both channels?</summary>
-            <div class="faq-body"><div><p>No. Plenty of accounts start with one. The bundle exists because the channels share data — paid queries reveal what content should target, and rankings tell ads what not to buy — but each service stands alone.</p></div></div>
+            <div class="faq-body"><div><p>No — plenty of accounts start with one. The bundle exists because paid queries reveal what content should target, and rankings tell ads what not to buy. Each stands alone.</p></div></div>
           </details>
           <details class="faq">
             <summary>Do I need to commit to monthly management?</summary>
-            <div class="faq-body"><div><p>No. Audits and cleanups are one-time projects. Management is month-to-month and only makes sense once the account has a clear optimization path.</p></div></div>
+            <div class="faq-body"><div><p>No. Audits and cleanups are one-time projects. Management is month-to-month, cancel anytime.</p></div></div>
           </details>
           <details class="faq">
             <summary>What access do you need?</summary>
-            <div class="faq-body"><div><p>Read-only: Google Ads viewer, plus GA4 and Search Console access. Admin only if you want changes implemented. You remain the owner and can revoke access anytime.</p></div></div>
+            <div class="faq-body"><div><p>Read-only Google Ads, GA4 and Search Console. Admin only if you want changes implemented. You stay the owner and can revoke anytime.</p></div></div>
           </details>
           <details class="faq">
             <summary>How fast does organic actually move?</summary>
-            <div class="faq-body"><div><p>Slower than ads, honestly. Technical fixes can show in weeks; content compounds over months. The roadmap separates quick wins from compounding bets, so you always know which is which.</p></div></div>
+            <div class="faq-body"><div><p>Slower than ads. Technical fixes can show in weeks; content compounds over months. The roadmap separates quick wins from long bets so you know which is which.</p></div></div>
           </details>
           <details class="faq">
             <summary>What about AI Overviews, ChatGPT &amp; Perplexity?</summary>
-            <div class="faq-body"><div><p>They're part of the plan, not a separate product. AI answers are assembled from the same signals search already rewards — clear structured data, genuine authority, and content that answers real questions — so the audit checks how you show up in AI answers and the fixes are built to earn citations there. It's woven into organic and combined engagements, not sold as a bolt-on.</p></div></div>
+            <div class="faq-body"><div><p>Built into organic and combined engagements, never billed separately. Models cite sources they can parse and trust, which is the same structured data and authority your organic work already builds.</p></div></div>
           </details>
           <details class="faq">
             <summary>How is this different from an agency?</summary>
-            <div class="faq-body"><div><p>Agencies bundle search into broad retainers with multiple handoffs. Clarify is narrower: diagnosis, cleanup, tracking, and disciplined optimization on the one page that matters.</p></div></div>
+            <div class="faq-body"><div><p>Agencies bundle search into broad retainers with multiple handoffs. Clarify is narrower, and you work with the person doing the work.</p></div></div>
           </details>
           <details class="faq">
             <summary>Do you guarantee results or rankings?</summary>
-            <div class="faq-body"><div><p>No ethical specialist should — nobody controls Google. The goal is better account quality, honest measurement, and decisions that give your spend and your content a real chance to work.</p></div></div>
+            <div class="faq-body"><div><p>No — nobody controls Google, and anyone who guarantees otherwise is selling something. The goal is better account quality and honest measurement.</p></div></div>
           </details>
           <details class="faq">
             <summary>Hire Clarify or use the software?</summary>
-            <div class="faq-body"><div><p>The software (paid search only) surfaces issues and alerts you — but you act on them yourself. Hiring Clarify adds the expertise: prioritization, careful implementation, and testing judgment the software can't replace. Software keeps you informed; management gets it handled.</p></div></div>
+            <div class="faq-body"><div><p>Software keeps you informed. Management gets it handled. The tool flags what's wrong; hiring Clarify means someone decides what to do about it and does it.</p></div></div>
           </details>
         </div>
       </div>
@@ -2245,11 +2295,11 @@
             </li>
             <li>
               <span class="num">2</span>
-              <span><strong>You get a reply, not a pitch.</strong> Clear scope, the right starting point, and whether the free check is even worth running for you.</span>
+              <span><strong>You get a reply, not a pitch.</strong> Clear scope and the right starting point.</span>
             </li>
             <li>
               <span class="num">3</span>
-              <span><strong>You decide the next move.</strong> Nothing, the audit, cleanup, or management. No pressure either way.</span>
+              <span><strong>You decide.</strong> Nothing, the audit, cleanup, or management.</span>
             </li>
           </ol>
           <div class="email-inline">
@@ -2725,14 +2775,14 @@
           intro: 'Three checks on your Google Ads account and one number: roughly what you are burning every month. <strong>No charge, no card, no call.</strong>',
           feats: ['Overlap — ads bidding on terms you already rank for', 'Wasted spend, estimated from your real search terms', 'Conversion tracking: pass, fail, or actively misleading'],
           stopLabel: 'Where it stops',
-          stop: 'no fix list, no roadmap, no campaign-by-campaign scoring. Those take a day of work rather than twenty minutes — that is the audit.',
+          stop: 'no fix list, no roadmap, no campaign-by-campaign scoring. That is the audit.',
           offer: 'Free Leak Check — Paid Search'
         },
         organic: {
           intro: 'Three checks on your site and Search Console, and one number: roughly what you are leaving on the table every month. <strong>No charge, no card, no call.</strong>',
           feats: ['Striking distance — queries ranking 5–20 you could own', 'Money pages that rank but cannot convert', 'Indexation and crawl red flags on pages that matter'],
           stopLabel: 'Where it stops',
-          stop: 'no fix list, no roadmap, no page-by-page scoring, and no AI-answer readiness review. That is the audit.',
+          stop: 'no fix list, no roadmap, no page-by-page scoring. That is the audit.',
           offer: 'Free Leak Check — Organic Search'
         },
         both: {

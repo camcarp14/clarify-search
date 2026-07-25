@@ -478,6 +478,8 @@
     .inst-tab {
       border: 0; cursor: pointer; border-radius: 999px;
       padding: 6px 13px;
+      /* comfortable touch target without changing how it looks */
+      min-height: 40px; display: inline-flex; align-items: center; justify-content: center;
       font-family: var(--font-mono); font-size: 10px; font-weight: 600;
       letter-spacing: .14em; text-transform: uppercase;
       color: var(--muted-2); background: transparent;
@@ -1393,7 +1395,8 @@
     .site-footer { border-top: 1px solid var(--line); padding: 26px 0; }
     .footer-grid { display: flex; align-items: center; justify-content: space-between; gap: 24px; font-size: 12.5px; color: var(--muted-2); }
     .footer-links { display: flex; gap: 22px; }
-    .footer-links a { text-decoration: none; color: var(--muted-2); transition: color .18s ease; }
+    .footer-links a { text-decoration: none; color: var(--muted-2); transition: color .18s ease;
+      display: inline-flex; align-items: center; min-height: 40px; }
     .footer-links a:hover { color: var(--ink); }
 
     /* ============ blur-fade scroll reveals (Motion Primitives-style) ============ */
@@ -1530,7 +1533,7 @@
 
       .instrument { padding: 20px 18px; border-radius: 20px; max-width: none; }
       .inst-top { flex-wrap: wrap; gap: 10px; }
-      .inst-tab { min-height: 34px; padding: 6px 12px; }
+      .inst-tab { min-height: 40px; padding: 6px 12px; } /* touch target floor */
       .inst-biz { font-size: 19px; }
       .inst-score { grid-template-columns: 96px 1fr; gap: 18px; margin-bottom: 18px; }
       .ring { width: 96px; height: 96px; }
@@ -1764,7 +1767,7 @@
             <span class="mono-label">Diagnosis</span>
             <h2>Most businesses run search as two silos. Google runs it as <span class="ital">one page</span>.</h2>
           </div>
-          <p>An AI answer up top, ads under it, rankings below that — one shared pool of buyer intent. The leaks live in the gaps between them, and Clarify is built to find them fast.</p>
+          <p>The expensive problems are rarely inside either channel. They sit in the seam between them — which is exactly where nobody is looking.</p>
         </div>
 
         <div class="pain-grid reveal stagger">

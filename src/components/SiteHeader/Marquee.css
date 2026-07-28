@@ -1,0 +1,117 @@
+/* ==========================================================================
+   MARQUEE
+   Layout only. The loop rate and its velocity coupling live in
+   siteHeader.motion.js (MARQUEE_MOTION).
+
+   Ported from legacy/index.html:582-605 and 1554-1556.
+   ========================================================================== */
+
+.marquee {
+  position: relative;
+  overflow: hidden;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 18px 0;
+  /* Fades both edges: transparent → opaque at 8%, opaque until 92% →
+     transparent. Both the standard and -webkit- properties are present because
+     Safari still needs the prefixed one. */
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+
+/**
+ * HOW THE LOOP WORKS — do not "fix" any of this.
+ *
+ * Two identical <ul>s inside a `width: max-content` flex track. Advancing the
+ * track by exactly -50% therefore advances it by exactly ONE <ul>, so frame 0
+ * and the repeat frame are pixel-identical and the loop is invisible.
+ *
+ * `width: max-content` is what makes -50% a meaningful number without measuring
+ * anything: the track is exactly as wide as its two lists, so a percentage of
+ * its own box is a percentage of the content. Remove it and the track collapses
+ * to the container width and -50% means nothing.
+ *
+ * Legacy's `animation: slide 44s linear infinite` (and its @keyframes) are gone:
+ * the driver is a GSAP tween on xPercent so the rate can be coupled to scroll
+ * velocity (§B.2). The geometry is unchanged — same element, same -50%, same
+ * duration, no measurement.
+ */
+.marquee-track {
+  display: flex;
+  gap: 0;
+  width: max-content;
+}
+
+/**
+ * Spacing rhythm across the ul → ul seam: `li` has a 34px gap between its text
+ * and its own ◆, the `ul` adds another 34px to the next `li`, and each `ul` has
+ * `padding: 0 17px` so the two lists butt together with 17 + 17 = 34px. Same
+ * rhythm across the join as everywhere else.
+ *
+ * Source strings stay mixed case; text-transform does the uppercasing.
+ */
+.marquee-track ul {
+  display: flex;
+  align-items: center;
+  gap: 34px;
+  list-style: none;
+  padding: 0 17px;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: .24em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+  white-space: nowrap;
+}
+
+.marquee-track li {
+  display: flex;
+  align-items: center;
+  gap: 34px;
+}
+
+/* U+25C6 BLACK DIAMOND. Every <li> gets one, INCLUDING the last in each list —
+   that last one is what supplies the separator across the ul → ul seam.
+   It is CSS content, never real text, so it is never in the data and never in
+   the accessibility tree. */
+.marquee-track li::after {
+  content: "◆";
+  font-size: 6px;
+  color: rgba(var(--tint-rgb), .3);
+}
+
+/* --------------------------------------------------------------------------
+   will-change discipline — §C.7
+   Only while the strip's own trigger reports it near the viewport. A track this
+   wide is a large layer; promoting it for the whole page life costs memory for
+   nothing.
+   -------------------------------------------------------------------------- */
+
+.marquee.is-live .marquee-track { will-change: transform; }
+
+/* --------------------------------------------------------------------------
+   Mobile — legacy 1554-1556
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 760px) {
+  .marquee { padding: 14px 0; }
+  .marquee-track ul { gap: 24px; font-size: 10px; }
+  .marquee-track li { gap: 24px; }
+
+  /* NOTE, ported faithfully, flagged not fixed: `ul { padding: 0 17px }` is NOT
+     reduced here, so the seam gap stays 34px while every other gap becomes
+     24px — a 10px rhythm break that ships today (§4.5). The correction is
+     `padding: 0 12px` at this breakpoint; it is a visual change to shipping
+     output and needs a decision, not a silent edit. */
+}
+
+/* --------------------------------------------------------------------------
+   Reduced motion
+   Legacy stopped the strip with `.marquee-track { animation: none }`. There is
+   no CSS animation to stop any more — Marquee.jsx's isReduced branch never
+   creates the loop tween or the velocity trigger, and sets the track to
+   xPercent: 0 so it shows the first copy of the list, static. Recorded here so
+   nobody re-adds the legacy rule looking for it.
+   -------------------------------------------------------------------------- */

@@ -1,0 +1,385 @@
+/* ==========================================================================
+   DIAGNOSIS — #diagnosis
+   Layout only. Every timing / distance / stagger number lives in
+   diagnosis.motion.js.
+
+   Block prefix is `diagnosis__` on everything this section owns (motion-system
+   §C.2). The legacy names — .pain-grid, .pain, .standard-strip,
+   .standard-metrics — were bare and would collide silently with eleven other
+   sections in one cascade; the VALUES below are the shipped ones, transcribed
+   from legacy/index.html lines 606-629, only the selectors changed.
+
+   Shared classes are composed, never re-declared: .band, .shell, .section-head,
+   .lede, .mono-label and `h2 .ital` all come from src/styles/components.css.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   0. SECTION FRAME
+   -------------------------------------------------------------------------- */
+
+/* legacy ships this as `style="border-top:0;"` on the section. It is a class
+   here (motion-system §B.3, "keep that as a class, not an inline style").
+
+   WHY IT EXISTS: `section.band` draws a 1px top hairline, and the .marquee
+   directly above #diagnosis already draws a border-bottom. Two rules on one
+   seam is a 2px line.
+
+   ⚠ INTEGRATION DEPENDENCY: if <Marquee /> is NOT rendered immediately above
+   <Diagnosis /> in App.jsx, this section has no top edge at all and runs
+   straight into whatever precedes it. Do not "fix" that by deleting this rule —
+   land the marquee. Specificity is (0,2,1) so it beats `section.band` (0,1,1)
+   regardless of stylesheet order. */
+section.band.diagnosis {
+  border-top: 0;
+}
+
+/* The retired legacy reveal system still ships in components.css §10, and its
+   `.section-head h2` rule clips every section head to zero height until a
+   `.reveal.in` ancestor appears. This section never adds that class — the
+   heading is a scrubbed SplitText mask rise instead (§0.1, §A.6) — so without
+   this override the H2 renders permanently invisible. (0,2,1) beats (0,1,1),
+   and this file loads after components.css because the component imports it.
+   Delete this the day components.css §10 goes away. */
+.diagnosis .section-head h2 {
+  clip-path: none;
+  transition: none;
+}
+
+/* SplitText writes `overflow: clip` inline on the mask wrappers; these are the
+   display + descender allowances, same shape as Hero.css. */
+.diagnosis__line {
+  display: block;
+}
+.diagnosis__line-mask {
+  display: block;
+  padding-bottom: 0.12em;
+  margin-bottom: -0.12em;
+}
+
+/* --------------------------------------------------------------------------
+   1. "ONE PAGE" — the two-layer cross-fade inside the H2
+   Colour change as an opacity cross-fade between stacked layers (motion-system
+   rule 2 / §B.13 #5), copied from the hero's .hero__face--neutral /
+   .hero__face--coded pattern. The two layers MUST have identical type metrics
+   or the cross-fade shimmers — they do, because the ink layer inherits
+   everything from the shared `h2 .ital` rule on their common parent.
+   -------------------------------------------------------------------------- */
+
+.diagnosis__onepage {
+  position: relative;
+  display: inline-block;
+  /* Guarantees SplitText never has to clone this element across a line break,
+     which would duplicate the absolutely-positioned twin. */
+  white-space: nowrap;
+}
+
+/* Progress 0: the phrase is muted. --muted is 5.46:1 on the bone ground, so
+   the un-animated state is readable on its own (it is also the state a no-JS
+   or pre-hydration render shows). */
+.diagnosis__onepage-face {
+  display: block;
+  color: var(--muted);
+}
+
+/* Progress 1: it is ink. aria-hidden in the markup, so it is out of the
+   accessibility tree; unselectable so it never doubles a copy-paste. */
+.diagnosis__onepage-face--ink {
+  position: absolute;
+  inset: 0;
+  color: var(--ink);
+  opacity: 0;
+  pointer-events: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* --------------------------------------------------------------------------
+   2. PAIN GRID  (legacy 606-615)
+
+   HOW THE HAIRLINES WORK: the grid's own `background: var(--line)` shows
+   through `gap: 1px`, and each card paints `var(--panel)` on top. That is why
+   the dividers are exactly 1px, and why `overflow: hidden` + `border-radius`
+   is what rounds the whole slab. Do NOT "simplify" this to per-card borders —
+   you get doubled 2px seams.
+
+   `overflow: hidden` is also what makes the silo gesture read: the outermost
+   card in each silo is clipped by the frame at progress 0, so the composition
+   is two slabs sliding under one frame rather than four cards drifting.
+   -------------------------------------------------------------------------- */
+
+.diagnosis__pain-grid {
+  /* Containing block for .diagnosis__seam, and the offsetParent the effect
+     measures each card's silo against. No visual change. */
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.diagnosis__pain {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 30px 26px;
+  background: var(--panel);
+  transition: background 0.25s ease;
+}
+
+.diagnosis__pain h3 {
+  font-size: 19px;
+  letter-spacing: -0.01em;
+}
+
+.diagnosis__pain p {
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+/* ACCESSIBILITY FIX — legacy contrast bug (spec RISKS R9).
+   `#13141b` is a near-black left over from the site's previous dark theme and
+   is the only occurrence of that value in the whole legacy file. On hover the
+   card went black while the heading stayed --ink (#211c16) and the body stayed
+   --muted (#6a6053): roughly 1.1:1 and 1.6:1. The card text disappeared.
+
+   The hover itself is preserved verbatim — removing it would be a design
+   decision. What is added is the other half the legacy never wrote: the text
+   flips with the surface. #f5f1e8 on #13141b is ~16:1; the body at .72 alpha
+   lands near 8.6:1. The colour transition matches the shipped background's
+   .25s so the two halves of one hover do not disagree. */
+.diagnosis__pain h3,
+.diagnosis__pain p {
+  transition: color 0.25s ease;
+}
+
+.diagnosis__pain:hover {
+  background: #13141b;
+}
+.diagnosis__pain:hover h3 {
+  color: #f5f1e8;
+}
+.diagnosis__pain:hover p {
+  color: rgba(245, 241, 232, 0.72);
+}
+
+/* --------------------------------------------------------------------------
+   3. THE SEAM
+   "They sit in the seam between them — which is exactly where nobody is
+   looking." A 1px rule plus a soft tint, lit at progress 0 and cross-faded to
+   nothing at exactly the progress the two silos meet.
+
+   Absolutely positioned, so it occupies no grid cell. Decorative and
+   aria-hidden in the markup.
+   -------------------------------------------------------------------------- */
+
+.diagnosis__seam {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  transform: translateX(-50%);
+  background: var(--line-strong);
+  pointer-events: none;
+}
+
+/* The soft tint. Wider than the rule so the seam reads as a region, not a
+   pinstripe — the copy calls it a place, not a line. */
+.diagnosis__seam::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 132px;
+  transform: translateX(-50%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(var(--tint-rgb), 0.07) 46%,
+    rgba(var(--tint-rgb), 0.07) 54%,
+    transparent
+  );
+}
+
+/* --------------------------------------------------------------------------
+   4. STANDARD STRIP  (legacy 617-629)
+   The amber → mint gradient is the brand's paid → organic axis.
+   -------------------------------------------------------------------------- */
+
+.diagnosis__standard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  /* The only thing separating the strip from the pain grid. There is no gap or
+     margin between .section-head and the grid other than the shared
+     `.section-head { margin-bottom: 64px }`. */
+  margin-top: 26px;
+  padding: 22px 28px;
+  border: 1px solid rgba(var(--tint-rgb), 0.16);
+  background: linear-gradient(
+    90deg,
+    rgba(var(--amber-rgb), 0.06),
+    rgba(var(--mint-rgb), 0.06)
+  );
+  border-radius: 16px;
+}
+
+.diagnosis__standard p {
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.diagnosis__standard p strong {
+  color: var(--ink);
+}
+
+.diagnosis__metrics {
+  display: flex;
+  gap: 30px;
+  flex-shrink: 0;
+}
+
+/* Each metric is its own mask. The inner grid rides yPercent out of it, which
+   is why the clip lives on the outer box and the transform on the inner one —
+   two elements, two jobs, no fight. The label's 1.65 line-height already leaves
+   room below its descenders, so no padding allowance is needed here. */
+.diagnosis__metric {
+  overflow: hidden;
+}
+
+.diagnosis__metric-inner {
+  display: grid;
+  gap: 2px;
+  text-align: center;
+}
+
+.diagnosis__metric-value {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  color: var(--ink);
+  /* The value is scrubbed (48h counts up from 0h, 0 counts down from 12).
+     Tabular figures stop the number jiggling as digits change under the tween. */
+  font-variant-numeric: tabular-nums;
+}
+
+/* ACCESSIBILITY FIX — contrast. Legacy set these labels to --muted-2 (#948a7b),
+   which is 3.01:1 on the bone ground at 11px/400 — a WCAG AA failure, and these
+   are shipping copy ("Audit target", "Long contracts", "Direct contact"), not
+   decoration. --muted (#6a6053) is the next step down the same warm-neutral
+   ramp at 5.46:1. This is exactly the call components.css §2 already made for
+   .mono-label, at the same token and the same size; the two must not disagree.
+   Do not go back past --muted. */
+.diagnosis__metric-label {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* --------------------------------------------------------------------------
+   5. will-change DISCIPLINE  (motion-system §C.7 / §B.13 #7)
+   Never in a base rule. `.is-live` is added and removed by this section's
+   ScrollTrigger onToggle, so the layers are promoted only while the scrub
+   window is actually active.
+   -------------------------------------------------------------------------- */
+
+.diagnosis__line,
+.diagnosis__pain,
+.diagnosis__seam,
+.diagnosis__standard,
+.diagnosis__metric-inner,
+.diagnosis__onepage-face--ink {
+  will-change: auto;
+}
+
+.diagnosis.is-live .diagnosis__line,
+.diagnosis.is-live .diagnosis__pain,
+.diagnosis.is-live .diagnosis__metric-inner {
+  will-change: transform;
+}
+.diagnosis.is-live .diagnosis__standard {
+  will-change: transform, opacity;
+}
+.diagnosis.is-live .diagnosis__seam,
+.diagnosis.is-live .diagnosis__onepage-face--ink {
+  will-change: opacity;
+}
+
+/* --------------------------------------------------------------------------
+   6. RESPONSIVE
+
+   Two ladders are in play and they do NOT line up, on purpose:
+     - LAYOUT breakpoints 1080 / 760 come from legacy and control column count.
+     - The MOTION breakpoint 899 (system.js MEDIA) controls which storyboard
+       runs, and therefore which way the silos separate.
+   The seam's orientation belongs to the second ladder, because it has to agree
+   with the split axis, not with the column count. Which card sits in which silo
+   is measured at runtime, so every combination of the two ladders resolves
+   correctly.
+   -------------------------------------------------------------------------- */
+
+/* Motion breakpoint: below 900px the silos separate on Y, so the seam is
+   horizontal. Deliberately 899, not 1080 or 760. */
+@media (max-width: 899px) {
+  .diagnosis__seam {
+    top: 50%;
+    bottom: auto;
+    left: 0;
+    right: 0;
+    width: auto;
+    height: 1px;
+    transform: translateY(-50%);
+  }
+  .diagnosis__seam::before {
+    top: 50%;
+    bottom: auto;
+    left: 0;
+    right: 0;
+    width: auto;
+    height: 96px;
+    transform: translateY(-50%);
+    background: linear-gradient(
+      180deg,
+      transparent,
+      rgba(var(--tint-rgb), 0.07) 46%,
+      rgba(var(--tint-rgb), 0.07) 54%,
+      transparent
+    );
+  }
+}
+
+/* legacy 1491-1508 */
+@media (max-width: 1080px) {
+  .diagnosis__pain-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .diagnosis__standard {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+}
+
+/* legacy 1513-1575. NOTE there is deliberately no ≤760px override for the
+   metrics row: it inherits the ≤1080px stacked strip and stays a horizontal
+   flex row with a 30px gap. That is tight at 320px but it is the shipped
+   behaviour — do not add a breakpoint that is not there. */
+@media (max-width: 760px) {
+  .diagnosis__pain-grid {
+    grid-template-columns: 1fr;
+    border-radius: 16px;
+  }
+  .diagnosis__pain {
+    padding: 22px 20px;
+  }
+  .diagnosis__pain h3 {
+    font-size: 17px;
+  }
+  .diagnosis__pain p {
+    font-size: 13px;
+  }
+}

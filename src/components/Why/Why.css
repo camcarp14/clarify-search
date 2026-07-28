@@ -1,0 +1,222 @@
+/* ==========================================================================
+   WHY CLARIFY — #why
+   Layout only. Every timing / distance / stagger number lives in
+   why.motion.js.
+
+   SCOPE RULES THIS FILE OBEYS
+   1. Nothing here is re-declared from src/styles/components.css. `.shell`,
+      `section.band`, `.mono-label`, `h2 .ital`, `.card`, `.pill-row`, `.pill`
+      and the three `.pill.p-*` modifiers are all SHARED and owned there. A copy
+      in this file would silently win the cascade for #why alone and then drift.
+   2. `.why-grid` / `.why-copy` / `.why-cards` / `.why-card` are the legacy
+      class names and are kept — they are already block-prefixed, so they cannot
+      collide with the other eleven sections. Anything this build ADDS uses the
+      `why__` prefix.
+   3. Transform and opacity are the only animated channels. Nothing below
+      animates top / left / width / height / colour.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Grid — legacy 1292-1294
+   .9fr 1.1fr is deliberate: the copy column is NARROWER than the cards column.
+   align-items:start stops the shorter column stretching to match the taller.
+   -------------------------------------------------------------------------- */
+
+.why-grid {
+  display: grid;
+  grid-template-columns: .9fr 1.1fr;
+  gap: 56px;
+  align-items: start;
+}
+
+/* .why-copy and .why-card are grid containers rather than flex purely so `gap`
+   handles the vertical rhythm against a global `margin: 0` reset. */
+.why-copy {
+  display: grid;
+  gap: 16px;
+}
+
+.why-copy h2 {
+  font-size: clamp(26px, 3vw, 40px);
+}
+
+/* `> p` and not `p`: after SplitText runs, the paragraph contains generated
+   line and mask divs, and a descendant selector would be fine — but the child
+   combinator is what legacy shipped and it keeps the rule from ever reaching
+   into a future nested element. */
+.why-copy > p {
+  font-size: 15.5px;
+  color: var(--muted);
+}
+
+/* --------------------------------------------------------------------------
+   Cards — legacy 1303-1306
+   The border / radius / background come from the shared `.card` base
+   (components.css §9), which carries exactly the values legacy declared here:
+   1px var(--line), 18px radius, var(--surface) fill. --surface is
+   rgba(255,255,255,.70) — TRANSLUCENT on purpose, so the page's background
+   gradients read through the card. Do not substitute an opaque colour.
+   -------------------------------------------------------------------------- */
+
+.why-cards {
+  display: grid;
+  gap: 16px;
+}
+
+.why-card {
+  display: grid;
+  gap: 8px;
+  padding: 24px 28px;
+}
+
+.why-card h3 {
+  font-size: 18px;
+  letter-spacing: -0.01em;
+}
+
+.why-card p {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+/* THE DECK STACKING ORDER.
+   For the 0.15 → 0.55 un-stacking gesture to read as a deck, card 1 has to sit
+   IN FRONT of card 2 — but card 2 comes later in the DOM, and a transformed
+   element creates its own stacking context, so by default it paints on top and
+   the "stack" looks inverted.
+
+   `z-index` here needs no `position: relative` (which legacy's .why-card
+   deliberately does not have, §3.4): these are grid items, and z-index applies
+   to grid items directly. In the finished layout the cards do not overlap, so
+   this is invisible except during the gesture. */
+.why-cards > .why-card:nth-child(1) { z-index: 2; }
+.why-cards > .why-card:nth-child(2) { z-index: 1; }
+
+/* --------------------------------------------------------------------------
+   Pills — the stacked tint layers
+   `.pill-row`, `.pill` and `.pill.p-paid / .p-org / .p-ai` are SHARED
+   (components.css §8). Everything below is only the two-layer scaffolding the
+   colour cross-fade needs, modelled on the hero's chip faces.
+   -------------------------------------------------------------------------- */
+
+/* The positioning host. It is the flex item inside `.pill-row` and the GSAP
+   target for the arrival tween, so both faces scale and fade together.
+   `white-space: nowrap` is inherited by both faces, guaranteeing they have
+   identical type metrics — if one wrapped and the other did not, the
+   cross-fade would shimmer. */
+.why__pill {
+  position: relative;
+  display: inline-flex;
+  white-space: nowrap;
+}
+
+/* The coloured layer, stacked exactly over the neutral one. It carries the real
+   `.pill.p-*` classes, so at opacity 1 it renders identically to legacy's
+   single coloured pill — same border colour, same text colour, same radius.
+
+   `inset: 0` matches the neutral face's border box (box-sizing is border-box
+   globally), and flex centring puts the glyphs in the same place as the neutral
+   face's padding flow. Both faces share `.pill`'s padding, font and size, which
+   is the condition §A.4 rule 2 puts on a colour cross-fade. */
+.why__pill-face--coded {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Progress-0 state, owned by CSS. The GSAP tween that raises this is
+     immediateRender:false precisely so it does not stomp this during the
+     timeline build. */
+  opacity: 0;
+}
+
+/* --------------------------------------------------------------------------
+   Masked line reveals
+   SplitText writes overflow:hidden inline on the mask sleeves it generates;
+   these rules are belt-and-braces plus the padding that stops descenders being
+   clipped by their own mask. Mirrors Hero.css.
+   -------------------------------------------------------------------------- */
+
+.why__line {
+  display: block;
+}
+
+.why__line-mask {
+  display: block;
+  padding-bottom: 0.12em;
+  margin-bottom: -0.12em;
+  overflow: hidden;
+}
+
+/* --------------------------------------------------------------------------
+   will-change discipline (§C.7)
+   Never in a base rule. `.is-live` is added and removed by the section's
+   ScrollTrigger onToggle, so these layers are promoted only while the section
+   is actually being scrubbed. Twelve sections with permanent will-change is
+   dozens of permanently-promoted compositor layers.
+   -------------------------------------------------------------------------- */
+
+.why .mono-label,
+.why__line,
+.why__pill,
+.why__pill-face,
+.why-card {
+  will-change: auto;
+}
+
+.why.is-live .mono-label,
+.why.is-live .why__line,
+.why.is-live .why__pill,
+.why.is-live .why__pill-face,
+.why.is-live .why-card {
+  will-change: transform, opacity;
+}
+
+/* --------------------------------------------------------------------------
+   Responsive — legacy 1505 (tablet), 1616-1617 (mobile)
+   `section.band { padding: 56px 0 }` at ≤760px is shared and already lives in
+   components.css §11; it is not repeated here.
+
+   Legacy declares the tablet and mobile grid rules as
+   `.why-grid, .faq-grid, .contact-grid` — one selector list across three
+   sections. Only the `.why-grid` half belongs to this file; #faq and #contact
+   own their own halves.
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 1080px) {
+  .why-grid {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+}
+
+@media (max-width: 760px) {
+  /* 28px, not the tablet 40px — the ≤760px rule is the later, more specific
+     step in the ladder and overrides it. */
+  .why-grid { gap: 28px; }
+  .why-card { padding: 20px; }
+}
+
+/* --------------------------------------------------------------------------
+   Reduced motion
+   The real reduced-motion path is the gsap.matchMedia() branch in Why.jsx,
+   which resolves every animated target to its final state and never creates a
+   ScrollTrigger. This block is the no-JS safety net for the one state CSS holds
+   at its START value: without it, a visitor with reduce-motion on AND a broken
+   JS bundle would see the pills stuck in their neutral, uncoloured layer.
+
+   Everything else in this section already renders at its final state with no
+   JS at all — a deliberate improvement on legacy, where `.reveal { opacity: 0 }`
+   made the whole band invisible if the observer never ran.
+   -------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .why__pill-face--coded { opacity: 1; }
+
+  /* SCOPED TO `[data-channel]`, and it has to be: GA4 and Search Console are
+     bare pills with a neutral face and NO coded face beneath them. An unscoped
+     `.why__pill-face--neutral { opacity: 0 }` would erase both of them for
+     exactly the audience this block exists to serve. */
+  .why__pill[data-channel] .why__pill-face--neutral { opacity: 0; }
+}

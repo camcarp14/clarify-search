@@ -1,0 +1,403 @@
+/* ==========================================================================
+   METHOD — #method
+   Layout only. Every timing / distance / stagger / scale number lives in
+   method.motion.js.
+
+   Block prefix is `method__` on everything this section owns (motion-system
+   §C.2). The legacy names were bare and generic — `.step` and `.artifact` in
+   particular would collide silently with eleven other sections in one global
+   cascade — so the SELECTORS changed and the VALUES did not. Legacy source is
+   index.html lines 784-812 (base), 1502 (tablet) and 1585-1595 (mobile).
+
+   LEGACY → PORT MAPPING (keep this auditable):
+     .method-grid          →  .method__grid
+     .step                 →  .method__step
+     .step-number          →  .method__number      (+ the two stacked faces)
+     .step-tier            →  .method__tier
+     .step-tier.t-free     →  .method__tier--free
+     .step-tier.t-paid     →  .method__tier--paid
+     .artifact             →  .method__artifact
+     (new, no legacy twin) →  .method__body, .method__track, .method__rail
+
+   NOT PORTED, deliberately:
+     - `.reveal` / `.reveal.stagger` / `.in` on .section-head and .method-grid,
+       and the `--rd` / nth-child transition-delay ladder that drove them. The
+       whole IntersectionObserver reveal system is retired (motion-system §0.1);
+       this section's entrance is a scrubbed GSAP timeline.
+
+   NOT DECLARED HERE, because components.css already owns it:
+     .shell, section.band, .section-head, .section-head > p, .lede,
+     .mono-label, `h2 .ital`, the --pad breakpoints, the 1080px section-head
+     stack, and the 760px `section.band { padding: 56px 0 }`.
+     #method is plain `band`, NOT `band tinted`, and it keeps `section.band`'s
+     1px top hairline — that rule is what separates it from #ai-visibility.
+     Nothing here re-declares any of it.
+
+   WHERE THE RESTING STATE LIVES — read this before adding a rule.
+   Every animated element below rests at its FINAL state in CSS, and progress 0
+   is painted by GSAP's build-time render of the `from` / `fromTo` tweens
+   (motion-system §C.6). That is why you will not find `opacity: 0` on the
+   copy, the badges, the artifacts or the rail: a prerendered or JS-disabled
+   page then shows the finished composition instead of four blank cards.
+   The ONE exception is .method__number-face--ink, which rests at opacity 0
+   because it is an absolutely-positioned twin and two opaque copies of the same
+   glyphs stacked at full opacity fringe against each other before hydration.
+   Its final state is set explicitly in the reduced-motion branch.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   0. SECTION FRAME
+   -------------------------------------------------------------------------- */
+
+/* The retired legacy reveal system still ships in components.css §10, and its
+   `.section-head h2` rule clips every section head to zero height until a
+   `.reveal.in` ancestor appears. This section never adds that class — the
+   heading is a scrubbed SplitText mask rise instead (§0.1, §A.6) — so without
+   this override the H2 renders permanently invisible. (0,2,1) beats (0,1,1),
+   and this file loads after components.css because the component imports it.
+   Delete this the day components.css §10 goes away. */
+.method .section-head h2 {
+  clip-path: none;
+  transition: none;
+}
+
+/* SplitText writes `overflow: clip` inline on the mask wrappers, so no overflow
+   is declared here; these are the display + descender allowances only. Same
+   shape as Diagnosis.css. */
+.method__line {
+  display: block;
+}
+.method__line-mask {
+  display: block;
+  padding-bottom: 0.12em;
+  margin-bottom: -0.12em;
+}
+
+/* --------------------------------------------------------------------------
+   1. THE RAIL
+   "The rail draws through the method." A 1px rule that is a PROGRESS GAUGE for
+   the four steps, and the reason this section does not need a pin.
+
+   Two elements, two jobs:
+     .method__track  the resting hairline. Always present, so progress 0 shows
+                     a real rule rather than a gap where one is about to be.
+     .method__rail   the drawn gradient, overlaid on the track and scaled from
+                     0 to 1 by scroll. amber → mint is the brand's paid →
+                     organic axis, and it deliberately echoes the gradient
+                     clipped into .method__number.
+
+   transform-origin is the START EDGE and belongs here, not in the motion
+   config: it is geometry, not timing. Horizontal above the grid at >=900px,
+   vertical down the left of the stack below it (see §7) — the orientation
+   follows the MOTION breakpoint, because it has to agree with the axis the
+   timeline scales, not with the column count.
+   -------------------------------------------------------------------------- */
+
+.method__body {
+  position: relative;
+}
+
+.method__track {
+  position: relative;
+  height: 1px;
+  background: var(--line);
+  /* The only separation between the rail and the grid. .section-head already
+     contributes its shared 64px margin-bottom above. */
+  margin-bottom: 24px;
+}
+
+.method__rail {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, var(--amber-soft), var(--mint-soft));
+  transform-origin: 0 50%;
+  pointer-events: none;
+}
+
+/* --------------------------------------------------------------------------
+   2. THE GRID  (legacy .method-grid, line 785)
+   Exactly four direct <article> children.
+   -------------------------------------------------------------------------- */
+
+.method__grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+/* --------------------------------------------------------------------------
+   3. THE STEP  (legacy .step, lines 786-790)
+   -------------------------------------------------------------------------- */
+
+.method__step {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 28px 26px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+}
+
+.method__step h3 {
+  font-size: 19px;
+}
+
+/* `flex: 1` is the bottom-alignment mechanism: the body copy absorbs the height
+   difference between the four cards so all four artifact rows sit on the same
+   line on desktop. Do not drop it. (It goes inert below 760px, where the step
+   becomes a grid — that is harmless and legacy leaves it in place too.) */
+.method__step p {
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--muted);
+  flex: 1;
+}
+
+/* --------------------------------------------------------------------------
+   4. THE ORDINAL  (legacy .step-number, lines 791-796)
+
+   Colour change as an opacity cross-fade between stacked layers (motion-system
+   rule 2 / §B.13 #5), exactly the hero's .hero__face--neutral /
+   .hero__face--coded mechanism. The two faces MUST have identical type metrics
+   or the cross-fade shimmers — they do, because both inherit everything from
+   the wrapper and the absolute twin's `inset: 0` matches the in-flow block box.
+
+   `opacity: .75` sits on the WRAPPER, which is where legacy put it (on
+   .step-number itself). Keeping it there means the resolved composite is
+   pixel-identical to the shipped site: an opaque gradient glyph, at .75, over
+   an identical muted glyph it completely covers.
+   -------------------------------------------------------------------------- */
+
+.method__number {
+  position: relative;
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 24px;
+  font-weight: 600;
+  opacity: 0.75;
+}
+
+/* Progress 0: the ordinal is muted. --muted is the darkest of the warm-neutral
+   ramp's muted steps (5.46:1 on the bone ground before the wrapper's .75, ~3.9:1
+   after) and at 24px/600 that clears WCAG AA's 3:1 large-text threshold. This is
+   also the state a prerendered or JS-disabled page shows, so it has to be
+   legible on its own — do not take it lighter than --muted. */
+.method__number-face {
+  display: block;
+  color: var(--muted);
+}
+
+/* Progress 1: the shipped gradient-clipped treatment. `color: transparent` plus
+   `background-clip: text` paints the gradient into the glyph shapes; if
+   background-clip ever fails the digits vanish, which is legacy's behaviour and
+   is accepted. Keep BOTH the -webkit- and unprefixed properties.
+
+   aria-hidden in the markup, so the ordinal is never announced twice;
+   unselectable so it never doubles a copy-paste. */
+.method__number-face--ink {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, var(--amber-soft), var(--mint-soft));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  opacity: 0;
+  pointer-events: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* --------------------------------------------------------------------------
+   5. THE TIER BADGE  (legacy .step-tier / .t-free / .t-paid, lines 799-812)
+
+   Which rung of the pricing ladder each step belongs to. 01 and 02 are free,
+   03 and 04 are paid, and the colour difference carries the section's whole
+   argument — "The free check is steps 01 and 02 — stop there and owe nothing."
+   Nothing in the timeline tints these; the badge only fades in, so the two
+   states stay exactly as shipped.
+
+   `align-self: start` keeps the pill from stretching across the flex column.
+   -------------------------------------------------------------------------- */
+
+.method__tier {
+  align-self: start;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 4px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.method__tier--free {
+  color: var(--mint-soft);
+  border: 1px solid rgba(var(--mint-rgb), 0.42);
+  background: rgba(var(--mint-rgb), 0.09);
+}
+
+.method__tier--paid {
+  color: var(--muted);
+  border: 1px solid var(--line-strong);
+  background: rgba(255, 255, 255, 0.8);
+}
+
+/* --------------------------------------------------------------------------
+   6. THE ARTIFACT ROW  (legacy .artifact, lines 797-798 / 802-806)
+   The receipt. This is the element the timeline stamps.
+   -------------------------------------------------------------------------- */
+
+/* ACCESSIBILITY FIX — legacy contrast bug.
+   Legacy sets `color: var(--mint)` (#2c9564). On the card's --surface fill over
+   the bone ground that measures 3.58:1, at 10.5px/400 with .1em tracking — a
+   WCAG AA failure (4.5:1 required; the large-text exemption needs 18.66px bold
+   or 24px). This is not decorative chrome: "ARTIFACT: ACCESS CHECKLIST" and its
+   three siblings are shipping copy, and they are the payoff line of the whole
+   section.
+   --mint-soft (#1b6b45) is the next step down the same ramp and measures
+   6.09:1. This is exactly the call components.css §2 already documented for
+   .tick ("If a section ever renders a .tick that is NOT aria-hidden, use
+   --mint-soft"), applied to the same token at a smaller size. Do not go back
+   past --mint-soft. Nothing else about the row is restyled. */
+.method__artifact {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding-top: 14px;
+  border-top: 1px dashed rgba(var(--tint-rgb), 0.2);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  color: var(--mint-soft);
+}
+
+/* --------------------------------------------------------------------------
+   7. will-change DISCIPLINE  (motion-system §C.7 / §B.13 #7)
+   Never in a base rule. `.is-live` is added and removed by this section's
+   ScrollTrigger onToggle, so these layers are promoted only while the scrub
+   window is actually active — and never at all under reduced motion, where no
+   trigger is created and the class is therefore never applied.
+   -------------------------------------------------------------------------- */
+
+.method__line,
+.method__rail,
+.method__number-face--ink,
+.method__tier,
+.method__step h3,
+.method__step p,
+.method__artifact {
+  will-change: auto;
+}
+
+.method.is-live .method__line,
+.method.is-live .method__rail {
+  will-change: transform;
+}
+.method.is-live .method__number-face--ink,
+.method.is-live .method__tier {
+  will-change: opacity;
+}
+.method.is-live .method__step h3,
+.method.is-live .method__step p,
+.method.is-live .method__artifact {
+  will-change: transform, opacity;
+}
+
+/* --------------------------------------------------------------------------
+   8. RESPONSIVE
+
+   Two ladders are in play and they do NOT line up, on purpose:
+     - LAYOUT breakpoints 1080 / 760 come from legacy and control column count
+       and the step's internal layout.
+     - The MOTION breakpoint 899 (system.js MEDIA) controls which storyboard
+       runs, and therefore which axis the rail scales.
+   The rail's orientation belongs to the second ladder. That means between 900
+   and 1080px the grid is already 2-up while the rail is still horizontal, and
+   between 761 and 899px the grid is 2-up with a vertical rail beside it. Both
+   read correctly, and unifying the two ladders would break one of them.
+   -------------------------------------------------------------------------- */
+
+/* legacy 1502 — the grid drops 4-up → 2-up. The `.section-head` half of this
+   breakpoint lives in components.css §11. */
+@media (max-width: 1080px) {
+  .method__grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* MOTION breakpoint. Below 900px the steps stack, so the rail becomes the
+   vertical spine of the stack: the body turns into a 1px gutter plus the grid,
+   and the track stretches to the grid's full height. Deliberately 899, not
+   1080 or 760 — it has to agree with method.motion.js `seq.rail.axis`. */
+@media (max-width: 899px) {
+  .method__body {
+    display: grid;
+    grid-template-columns: 1px 1fr;
+    column-gap: 16px;
+    align-items: stretch;
+  }
+
+  /* `height: auto` is what lets the grid stretch it; a definite height would
+     opt the item out of `align-items: stretch`. */
+  .method__track {
+    height: auto;
+    width: 1px;
+    margin-bottom: 0;
+  }
+
+  .method__rail {
+    background: linear-gradient(180deg, var(--amber-soft), var(--mint-soft));
+    transform-origin: 50% 0;
+  }
+}
+
+/* legacy 1585-1595 */
+@media (max-width: 760px) {
+  .method__grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  /* number and tier share row 1; everything else spans full width. The old
+     rule had the number spanning 3 rows, which broke when the tier badge
+     became a 4th child and squeezed the copy into a sliver. */
+  .method__step {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 10px 14px;
+    padding: 20px;
+    border-radius: 16px;
+    align-items: center;
+  }
+  .method__number {
+    font-size: 20px;
+    grid-column: 1;
+    grid-row: 1;
+  }
+  /* The base rule's `align-self: start` is overridden by the grid container's
+     `align-items: center` plus this explicit `justify-self`. */
+  .method__tier {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: start;
+  }
+  .method__step h3,
+  .method__step p,
+  .method__step .method__artifact {
+    grid-column: 1 / -1;
+  }
+  .method__step h3 {
+    font-size: 16.5px;
+  }
+  .method__step p {
+    font-size: 13px;
+  }
+  /* The dashed rule and its padding go away entirely on mobile. */
+  .method__artifact {
+    border-top: 0;
+    padding-top: 0;
+    font-size: 9.5px;
+  }
+}

@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
 import Lenis from 'lenis'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
@@ -20,6 +20,19 @@ export const SMOOTH = {
   smoothTouch: false,
 }
 
+const LenisContext = createContext(null)
+
+/**
+ * The live Lenis instance, or null.
+ *
+ * Null is a normal, expected value — under prefers-reduced-motion Lenis is
+ * never constructed at all, and it is also null on the first render before the
+ * effect runs. Every consumer must handle null by falling back to native
+ * behaviour rather than treating it as an error. Anchor scrolling, for example,
+ * degrades to a native jump landed correctly by `scroll-margin-top`.
+ */
+export const useLenis = () => useContext(LenisContext)
+
 /**
  * Wires Lenis to GSAP's ticker and to ScrollTrigger.
  *
@@ -32,6 +45,9 @@ export const SMOOTH = {
  * falls back to the browser's native scroll.
  */
 export default function SmoothScroll({ children }) {
+  // Held in state, not a ref, so consumers re-render once the instance exists.
+  const [lenis, setLenis] = useState(null)
+
   useEffect(() => {
     if (prefersReducedMotion()) return
 
@@ -52,12 +68,15 @@ export default function SmoothScroll({ children }) {
     gsap.ticker.add(raf)
     gsap.ticker.lagSmoothing(0)
 
+    setLenis(lenis)
+
     return () => {
       gsap.ticker.remove(raf)
       gsap.ticker.lagSmoothing(500, 33)
       lenis.destroy()
+      setLenis(null)
     }
   }, [])
 
-  return children
+  return <LenisContext.Provider value={lenis}>{children}</LenisContext.Provider>
 }

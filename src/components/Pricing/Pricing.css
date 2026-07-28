@@ -1,0 +1,984 @@
+/* ==========================================================================
+   PRICING — every price on the page.
+   Layout only. Every timing / distance / stagger-spacing number lives in
+   pricing.motion.js.
+
+   Ported from legacy/index.html 814-998 (pricing block), 1186-1289 (compare
+   table, software block, fineprint), plus the 1080 / 900 / 760 overrides at
+   1491-1508, 1283-1289 and 1513-1630.
+
+   Legacy class names are kept (.seg, .offer, .free-strip, .compare,
+   .software-block, …) because both the section spec and motion-system §B.7
+   address the storyboard by those names. Every rule is scoped under
+   `.pricing`, the section root's own class, so nothing in this file can reach
+   another builder's markup — twelve sections share one cascade and the
+   collisions would be silent (motion-system §C.2). Elements that did not exist
+   in legacy and are here purely to be animated or to fix a stacking bug carry
+   the block prefix: .pricing__ring, .pricing__sw-number, .pricing__line.
+
+   NOT PORTED, deliberately:
+     - `.reveal` / `.reveal.stagger` on .section-head, .seg-wrap, .free-strip,
+       .offers-grid, .compare-wrap and .software-block. The whole
+       IntersectionObserver reveal system is retired (motion-system §0.1); all
+       six are now beats on one scrubbed GSAP timeline.
+     - the legacy cursor-spotlight class hook on the three offer cards. That
+       name is banned (§C.2). The EFFECT survives — it is a pointer
+       micro-interaction, not a scroll reveal — reimplemented below, scoped to
+       this section, on --pricing-mx / --pricing-my.
+     - `.mag` on the two magnetic CTAs. It is only a `will-change: transform`
+       hint, and a permanent will-change is exactly what §C.7 forbids. Framer
+       Motion owns those transforms now and applies/removes will-change around
+       the actual animation.
+     - the local `#pricing { --acc: … }` accent declarations. components.css §3
+       already publishes the identical trio under [data-accent]; the section
+       renders data-accent alongside data-ch instead of re-declaring them.
+
+   NOT DECLARED HERE, because components.css / base.css already own it:
+     .shell, section.band, section.band.tinted, .section-head, .lede,
+     .mono-label, h2 .ital, .cta, .secondary-cta, .cta::after, .sr-only, the
+     --pad breakpoints, `:where(ul) { margin: 0 }`, and the
+     `:is(.band …) :is(h1,h2,h3)` weight/leading fix. Do not re-declare any of
+     them here.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   0. UNDOING THE RETIRED REVEAL SYSTEM
+
+   components.css §10 sets `.section-head h2 { clip-path: inset(0 0 106% 0) }`
+   and only ever opens it again via a class this section does not use. Without
+   this override the H2 would be clipped to nothing for the entire life of the
+   page and the SplitText masks would animate inside an invisible box. Highest-
+   value rule in the file.
+   -------------------------------------------------------------------------- */
+
+.pricing .section-head h2 {
+  clip-path: none;
+  transition: none;
+}
+
+/* --------------------------------------------------------------------------
+   1. CHANNEL THEMING
+
+   Three custom properties inherit down the whole subtree and everything that
+   follows the channel does so by reading them — there is no per-channel class
+   on any descendant. The properties themselves come from components.css §3
+   via [data-accent]; only the rules that key off the CHANNEL DIRECTLY live
+   here, because they cannot be expressed through the accent trio.
+
+   Consumers of --acc / --acc-soft / --acc-rgb inside this section:
+     .offer::after (spotlight) · .feature-list li::before (the — bullet)
+     .free-strip border + wash  · .fs-badge background
+     .fs-list li::before (the ✓) · .compare-lead em
+     .compare-scroll:focus-visible · .ct-p · .compare td.y
+
+   DELIBERATELY NOT channel-themed, in any channel: .offer-badge, the featured
+   card's conic ring, .seg-save's default state, the entire .software-block
+   family, and .ct-p.ct-free (always mint).
+
+   The rgba() literals below are NOT tokens and are not typos:
+   rgba(77,127,230,…) is not --blue-rgb (58,107,204), and rgba(166,194,247,.6)
+   is its own value. Substituting the token changes the shipping colour.
+   -------------------------------------------------------------------------- */
+
+.pricing[data-ch="organic"] .seg-thumb {
+  background: rgba(var(--mint-rgb), .14);
+  border-color: rgba(var(--mint-rgb), .5);
+}
+
+.pricing[data-ch="both"] .seg-thumb {
+  background: rgba(77, 127, 230, .2);
+  border-color: rgba(77, 127, 230, .62);
+}
+
+.pricing[data-ch="both"] .seg-save {
+  border-color: rgba(166, 194, 247, .6);
+  color: var(--blue-soft);
+}
+
+.pricing[data-ch="both"] .price .number {
+  background: linear-gradient(100deg, var(--blue-soft), #cfe0fb);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* --------------------------------------------------------------------------
+   2. SEGMENTED CONTROL
+
+   The thumb is exactly one third of the padded track wide and moves by whole
+   multiples of its own width — translateX percentages resolve against the
+   element's own width, so `translateX(1 * 100%)` slides it precisely one
+   button over, and `left: 4px` makes index 0 sit flush inside the padding.
+
+   --pricing-thumb-x is written by GSAP (Pricing.jsx, click-driven and
+   wall-clock — §B.7 is explicit that the control is NOT scroll-driven). The
+   @property registration is REQUIRED: without it the custom property is a
+   plain string to the engine and would jump 0 → 1 instead of easing. Same
+   precedent as Hero.css's --drift-amp.
+
+   The name is block-prefixed rather than legacy's bare `--x`. @property
+   registers GLOBALLY even from a component-scoped stylesheet, and a bare --x
+   registered as a <number> would silently change the meaning of any other
+   builder's --x. Its initial-value of 0 is the paid channel, so first paint is
+   correct with no inline style and therefore no React-vs-GSAP contest over the
+   same property.
+
+   DIVERGENCE, flagged: legacy transitioned the thumb in CSS over .45s with
+   --e-spring. GSAP owns the transform channel now, so `transform` is not in
+   the transition list here — two owners of one channel is a fight nobody wins.
+   The colour half of the transition stays in CSS.
+   -------------------------------------------------------------------------- */
+
+@property --pricing-thumb-x {
+  syntax: '<number>';
+  initial-value: 0;
+  inherits: false;
+}
+
+.pricing .seg-wrap {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  margin-bottom: 44px;
+}
+
+.pricing .seg {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(118px, 1fr));
+  padding: 4px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: rgba(var(--tint-rgb), .05);
+  width: min(460px, 100%);
+}
+
+.pricing .seg-thumb {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc((100% - 8px) / 3);
+  border-radius: 999px;
+  background: rgba(var(--amber-rgb), .16);
+  border: 1px solid rgba(var(--amber-rgb), .5);
+  transform: translateX(calc(var(--pricing-thumb-x, 0) * 100%));
+  transition: background .3s ease, border-color .3s ease;
+}
+
+.pricing .seg-btn {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  min-height: 42px;              /* touch floor */
+  padding: 8px 10px;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  /* CONTRAST FIX, not a transcription. Legacy shipped var(--muted-2)
+     (#948a7b), which measures 2.70:1 against the tinted band at 11.5px/600 —
+     a WCAG AA failure (4.5:1 required; the large-text exemption needs 18.66px
+     bold). These are the labels of the two UNSELECTED options in a radiogroup,
+     so an unreadable inactive state is a functional failure, not a cosmetic
+     one: the user cannot see what they would be switching to. --muted
+     (#6a6053) is the next step down the same warm-neutral ramp and measures
+     4.87:1. Same fix, same reasoning and same ramp step as the one
+     components.css already applied to .mono-label. */
+  color: var(--muted);
+  transition: color .25s ease;
+}
+
+/* The active label's colour comes from the ARIA state, not from a class. That
+   makes aria-checked load-bearing for the visuals as well as for assistive
+   tech — do not swap it for a className. */
+.pricing .seg-btn[aria-checked="true"] { color: var(--ink); }
+
+.pricing .seg-save {
+  font-size: 9px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  border: 1px solid rgba(var(--mint-rgb), .5);
+  color: var(--mint-soft);
+  letter-spacing: .08em;
+}
+
+.pricing .seg-caption {
+  font-size: 13px;
+  /* CONTRAST FIX, same reasoning as .seg-btn above: legacy's --muted-2 is
+     2.70:1 on the tinted band. This paragraph is the radiogroup's own
+     description — it is wired to the control with aria-describedby and it
+     changes with every selection, so it is the one line on the page that
+     explains what the user just did. --muted measures 4.87:1. */
+  color: var(--muted);
+  text-align: center;
+}
+
+/* Declared even though no current caption contains a <strong>. Kept because
+   the captions are data and may grow one. */
+.pricing .seg-caption strong { color: var(--muted); font-weight: 600; }
+
+/* --------------------------------------------------------------------------
+   3. FREE-OFFER STRIP
+   -------------------------------------------------------------------------- */
+
+.pricing .free-strip {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 36px;
+  align-items: center;
+  margin-bottom: 22px;
+  padding: 28px 32px;
+  border: 1px solid rgba(var(--acc-rgb), .34);
+  background: linear-gradient(100deg, rgba(var(--acc-rgb), .07), rgba(255, 255, 255, .9) 55%);
+  border-radius: 20px;
+  box-shadow: 0 8px 24px rgba(var(--tint-rgb), .06);
+  transition: border-color .3s ease, background .3s ease;
+}
+
+.pricing .fs-head {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  flex-wrap: wrap;
+}
+.pricing .fs-head h3 { font-size: 22px; }
+
+.pricing .fs-badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--bg);
+  background: var(--acc-soft);
+  padding: 5px 11px;
+  border-radius: 999px;
+  transition: background .3s ease;
+}
+
+.pricing .fs-intro {
+  margin-top: 12px;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--muted);
+  max-width: 64ch;
+}
+.pricing .fs-intro strong { color: var(--ink); font-weight: 600; }
+
+.pricing .fs-list {
+  list-style: none;
+  padding: 0;
+  margin: 15px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px 24px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.pricing .fs-list li { position: relative; padding-left: 19px; }
+.pricing .fs-list li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--acc);
+  font-size: 11px;
+  line-height: 1.5;
+  transition: color .3s ease;
+}
+
+/* NOTE: .fs-list items are rendered with `class="fl-in"` and an inline --i,
+   exactly as legacy writes them — and, exactly as in legacy, NO animation
+   runs, because the flIn keyframe rule is scoped to `.feature-list li.fl-in`
+   and this is a `.fs-list`. Preserved as-is on purpose. Widening that selector
+   would start animating the free-strip bullets, which is a visual change, not
+   a bug fix. */
+
+.pricing .fs-stop {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px dashed rgba(var(--tint-rgb), .2);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--muted-2);
+  max-width: 72ch;
+}
+.pricing .fs-stop b {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-right: 9px;
+}
+
+.pricing .fs-side {
+  align-self: center;
+  display: grid;
+  justify-items: center;
+  gap: 18px;
+  text-align: center;
+  padding-left: clamp(0px, 2vw, 28px);
+  border-left: 1px solid rgba(var(--tint-rgb), .14);
+}
+.pricing .fs-side .price { padding-top: 0; justify-content: center; }
+.pricing .fs-side .price .currency { font-size: 26px; }
+.pricing .fs-side .price .number { font-size: clamp(72px, 8vw, 104px); line-height: .92; }
+.pricing .fs-side .cta {
+  font-size: 15px;
+  padding: 17px 30px;
+  min-height: 54px;
+  width: 100%;
+}
+
+/* --------------------------------------------------------------------------
+   4. TIER CARDS
+   -------------------------------------------------------------------------- */
+
+.pricing .offers-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  align-items: stretch;
+}
+
+.pricing .offer {
+  position: relative;
+  box-shadow: 0 6px 20px rgba(var(--tint-rgb), .05);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 32px 28px;
+  border: 1px solid rgba(var(--tint-rgb), .15);
+  border-radius: 20px;
+  background: var(--surface);
+  /* DIVERGENCE, and it is load-bearing: legacy's transition list is
+     `border-color .25s ease, transform .25s var(--e-out)`. `transform` is
+     removed here because this card is a scrubbed GSAP target. A CSS transition
+     on transform would put a 250ms smoothing filter in front of every frame
+     the scrub writes, so the card would visibly trail the scroll — the exact
+     "input lag" failure §A.2 describes for an eased rail, arriving by the back
+     door. Legacy could afford it because nothing there animated .offer's
+     transform at all; the declaration was vestigial. */
+  transition: border-color .25s ease;
+}
+.pricing .offer:hover { border-color: rgba(var(--tint-rgb), .3); }
+
+/* The card is a GSAP target, so it carries a transform and therefore creates a
+   stacking context. Content is lifted above the ring and the spotlight;
+   .offer-badge sits above both. Listed explicitly rather than as `> *` because
+   .offer-badge and .pricing__ring are absolutely positioned and a blanket
+   `position: relative` would break them. */
+.pricing .offer > .offer-top,
+.pricing .offer > .feature-list,
+.pricing .offer > .cta,
+.pricing .offer > .secondary-cta {
+  position: relative;
+  z-index: 1;
+}
+
+.pricing .offer.featured {
+  background: linear-gradient(180deg, #fffefb, rgba(255, 252, 246, .9));
+  border-color: transparent;
+}
+
+/* The animated conic border.
+
+   STRUCTURAL FIX (spec R12), not a transcription. Legacy paints this with
+   `.offer.featured::before { z-index: -1 }`, which only works while NO
+   ancestor creates a stacking context. This card IS a GSAP target — the
+   entrance tween leaves a transform on it — so a z-index:-1 pseudo-element
+   would paint behind the card's own background and the ring would simply
+   vanish. It is a real child element here at z-index 0, with the card content
+   lifted to 1. Same geometry, same gradient, same 9s spin.
+
+   The @property registration is required: without it the conic angle is an
+   unanimatable string and the ring does not rotate. Block-prefixed rather than
+   legacy's bare `--angle` because @property registers globally even from a
+   component-scoped file, and another section wanting a conic ring is a real
+   possibility. */
+@property --pricing-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.pricing .pricing__ring {
+  position: absolute;
+  inset: -1px;
+  z-index: 0;
+  border-radius: 21px;
+  padding: 1px;
+  background: conic-gradient(
+    from var(--pricing-angle, 0deg),
+    rgba(var(--amber-rgb), .7),
+    rgba(var(--mint-rgb), .7),
+    rgba(var(--amber-rgb), .08),
+    rgba(var(--amber-rgb), .7)
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: pricing-spin 9s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes pricing-spin { to { --pricing-angle: 360deg; } }
+
+.pricing .offer-badge {
+  position: absolute;
+  top: -12px;
+  left: 28px;
+  z-index: 2;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--bg);
+  background: linear-gradient(90deg, var(--amber-soft), var(--mint-soft));
+  padding: 6px 12px;
+  border-radius: 999px;
+}
+
+.pricing .offer-top { display: grid; gap: 10px; }
+.pricing .offer h3 { font-size: 21px; }
+
+/* min-height is what keeps the three price rows on a common baseline while the
+   grid is three columns. It is removed at <=1080px, where the grid is one
+   column and there is nothing left to align to. */
+.pricing .offer-intro {
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--muted);
+  min-height: 43px;
+}
+
+/* --------------------------------------------------------------------------
+   5. PRICE CLUSTER
+   Shared by the tier cards and the free strip.
+   -------------------------------------------------------------------------- */
+
+.pricing .price { display: flex; align-items: baseline; gap: 4px; padding-top: 6px; }
+.pricing .price .currency { font-size: 18px; color: var(--muted-2); }
+.pricing .price .number {
+  font-family: var(--font-display);
+  font-size: 44px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  /* tabular-nums is what stops the number jittering while the scrubbed counter
+     runs — every digit is the same width, so 289 and 290 occupy identical
+     boxes. Without it the counter visibly wobbles. */
+  font-variant-numeric: tabular-nums;
+}
+.pricing .price .period { font-size: 15px; color: var(--muted-2); }
+
+/* `swap` is permanent in the className. The React equivalent of legacy's
+   forced-reflow restart is a key= on the .price node, so the element remounts
+   on every channel change and the keyframe replays naturally. The class stays
+   because the reduced-motion override below targets `.price.swap`. */
+.pricing .price.swap .number,
+.pricing .price.swap .period { animation: pricing-priceIn .4s var(--e-out); }
+
+@keyframes pricing-priceIn { from { opacity: 0; transform: translateY(9px); } }
+
+/* min-height reserves the row so the cards do not jump when the .save-pill
+   appears on the `both` channel and disappears again. */
+.pricing .price-note {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: .08em;
+  color: var(--muted-2);
+  text-transform: uppercase;
+  min-height: 24px;
+}
+
+.pricing .save-pill {
+  font-size: 9.5px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(var(--mint-rgb), .5);
+  color: var(--mint-soft);
+  background: rgba(var(--mint-rgb), .08);
+  letter-spacing: .08em;
+  animation: pricing-priceIn .4s var(--e-out);
+}
+
+/* --------------------------------------------------------------------------
+   6. FEATURE LIST
+   `flex: 1` is what pushes every card's CTA to the bottom so all three align
+   despite the uneven feature counts (4/4/4 paid, 5/4/5 organic and both).
+   -------------------------------------------------------------------------- */
+
+.pricing .feature-list {
+  list-style: none;
+  padding: 16px 0 0;
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 10px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--muted);
+  flex: 1;
+  align-content: start;
+}
+.pricing .feature-list li { display: flex; gap: 9px; }
+.pricing .feature-list li::before {
+  content: "—";
+  color: var(--acc);
+  flex-shrink: 0;
+  transition: color .3s ease;
+}
+
+/* --i is the zero-based item index, written by React as an inline custom
+   property and consumed here as a 45ms-per-item entry delay. It must stay
+   unitless. */
+.pricing .feature-list li.fl-in {
+  animation: pricing-flIn .45s var(--e-out) both;
+  animation-delay: calc(var(--i, 0) * 45ms);
+}
+
+@keyframes pricing-flIn { from { opacity: 0; transform: translateY(7px); } }
+
+.pricing .offer .cta,
+.pricing .offer .secondary-cta { width: 100%; }
+
+/* --------------------------------------------------------------------------
+   7. COMPARISON TABLE
+   -------------------------------------------------------------------------- */
+
+.pricing .compare-wrap { margin-top: 26px; }
+
+.pricing .compare-lead {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(17px, 2vw, 22px);
+  letter-spacing: -.02em;
+  margin-bottom: 6px;
+}
+.pricing .compare-lead span {
+  display: block;
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: 14.5px;
+  color: var(--muted);
+  margin-top: 7px;
+}
+.pricing .compare-lead em { font-style: normal; color: var(--acc-soft); }
+
+/* The page must never scroll horizontally; only this container may.
+   overscroll-behavior-x: contain stops a horizontal flick inside the table
+   from chaining into a browser back-navigation gesture. */
+.pricing .compare-scroll {
+  margin-top: 18px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+}
+.pricing .compare-scroll:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 2px;
+}
+
+.pricing .compare { width: 100%; border-collapse: collapse; min-width: 680px; }
+.pricing .compare th,
+.pricing .compare td {
+  padding: 13px 16px;
+  text-align: left;
+  font-size: 13.5px;
+  vertical-align: middle;
+}
+.pricing .compare thead th {
+  padding-top: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line-strong);
+}
+
+.pricing .ct-h {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: -.015em;
+  color: var(--ink);
+}
+.pricing .ct-p {
+  display: block;
+  margin-top: 5px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  color: var(--acc-soft);
+}
+/* Always mint, in every channel — the free tier does not follow the accent. */
+.pricing .ct-p.ct-free { color: var(--mint-soft); }
+
+/* The sticky row-label column. Its gradient fades out at 88% so cells slide
+   under it rather than colliding with a hard edge.
+
+   ⚠️ position:sticky here is why pricing.motion.js forbids ever transforming
+   .compare-wrap or .compare-scroll: a transform on any ancestor gives this
+   cell a new containing block and the column silently stops sticking
+   (motion-system §D.11). */
+.pricing .compare tbody th {
+  font-weight: 500;
+  color: var(--muted);
+  white-space: nowrap;
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: linear-gradient(90deg, var(--bg) 88%, rgba(245, 241, 232, 0));
+}
+
+.pricing .compare tbody tr + tr th,
+.pricing .compare tbody tr + tr td { border-top: 1px solid rgba(var(--tint-rgb), .1); }
+
+.pricing .compare tbody td { color: var(--ink); }
+.pricing .compare td.y { color: var(--acc); font-size: 15px; }
+.pricing .compare td.n { color: var(--muted-2); }
+/* The free column of the scope row: a limit, not a feature. */
+.pricing .compare td .no { color: var(--muted-2); }
+
+/* The column you are most likely to buy.
+
+   ⚠️ POSITIONAL AND FRAGILE. In <thead> the row's children are five <th>s, so
+   :nth-child(3) is the Audit header. In <tbody> each row is <th> + 4 <td>, so
+   td:nth-child(3) is the Audit cell (child 1 is the th, child 2 is Leak
+   Check). Any wrapper element, <colgroup> or extra node inserted into a row
+   shifts the highlight onto the wrong column. React fragments add no DOM
+   nodes, which is why the .map() in CompareTable is safe. */
+.pricing .compare thead th:nth-child(3),
+.pricing .compare tbody td:nth-child(3) { background: rgba(var(--tint-rgb), .035); }
+
+.pricing .compare-note { margin-top: 14px; font-size: 13px; color: var(--muted-2); }
+
+/* --------------------------------------------------------------------------
+   8. SOFTWARE BLOCK — amber in every channel, never re-tinted
+   `.sw-head { grid-row: 1 / span 2 }` + `.sw-foot { grid-column: 2 }` is what
+   stacks the price box above the CTA in the right-hand column while the copy
+   spans both rows.
+   -------------------------------------------------------------------------- */
+
+.pricing .software-block {
+  margin-top: 26px;
+  padding: clamp(26px, 3vw, 38px) clamp(24px, 3vw, 40px);
+  border-radius: 20px;
+  border: 1px solid rgba(var(--amber-rgb), .28);
+  background: linear-gradient(120deg, rgba(var(--amber-rgb), .085), rgba(var(--amber-rgb), .02) 62%);
+  display: grid;
+  grid-template-columns: 1.15fr .85fr;
+  column-gap: clamp(24px, 3vw, 44px);
+  row-gap: 14px;
+  align-items: start;
+}
+
+.pricing .sw-head { grid-row: 1 / span 2; align-self: center; }
+.pricing .sw-kicker {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--amber-soft);
+}
+.pricing .sw-head h3 { margin-top: 10px; font-size: clamp(22px, 2.6vw, 30px); letter-spacing: -.03em; }
+.pricing .sw-head p { margin-top: 11px; font-size: 14px; line-height: 1.65; color: var(--muted); max-width: 52ch; }
+
+.pricing .sw-price {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  text-align: center;
+  padding: 22px 20px;
+  border-radius: 16px;
+  border: 1px solid rgba(var(--amber-rgb), .3);
+  background: #fff;
+}
+.pricing .sw-amount {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(44px, 5vw, 58px);
+  letter-spacing: -.03em;
+  line-height: 1;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.pricing .sw-cur { font-size: .42em; color: var(--muted-2); margin-right: 2px; vertical-align: super; }
+.pricing .sw-amount em { font-style: normal; font-size: .34em; color: var(--muted-2); margin-left: 2px; }
+
+/* The digits, wrapped so GSAP has a node to write into — legacy leaves them as
+   a bare text node. Inline, inherits everything, adds no box. tabular-nums for
+   the same reason as the card prices: the counter must not wobble. */
+.pricing .pricing__sw-number { font-variant-numeric: tabular-nums; }
+
+.pricing .sw-terms {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+  line-height: 1.6;
+}
+
+.pricing .sw-foot { grid-column: 2; display: grid; gap: 10px; justify-items: center; }
+.pricing .sw-foot .cta { width: 100%; }
+
+.pricing .pricing-fineprint { margin: 22px 4px 0; font-size: 13px; color: var(--muted-2); }
+
+/* --------------------------------------------------------------------------
+   9. SPLIT LINES
+   SplitText builds these with `mask: 'lines'`, so `.pricing__line-mask` is the
+   clip box and `.pricing__line` is the thing that translates.
+   -------------------------------------------------------------------------- */
+
+.pricing .pricing__line { display: block; }
+
+.pricing .pricing__line-mask {
+  display: block;
+  /* Extends the clip box below the baseline so descenders are not shaved,
+     without changing where the next line sits. Same trick as
+     .hero__line-mask — the H2 is mixed-case display type. */
+  overflow: hidden;
+  padding-bottom: .12em;
+  margin-bottom: -.12em;
+}
+
+/* --------------------------------------------------------------------------
+   10. CURSOR SPOTLIGHT
+
+   The legacy spotlight pseudo-element (legacy 873-879), reimplemented locally
+   because its class hook is retired by name (motion-system §0.1 / §C.2).
+   Identical values; only the custom-property names are section-scoped.
+
+   Unlike Coverage, this section DOES publish --acc-rgb, so the spotlight is
+   amber / mint / blue and follows the channel. That is the shipping look.
+
+   Visibility is CSS-driven — the layer is opacity 0 and :hover reveals it. JS
+   only moves the gradient centre. No z-index: it is a positioned pseudo with
+   `auto`, so it paints after the ring (z-index 0, earlier in tree order) and
+   below the card content (z-index 1).
+   -------------------------------------------------------------------------- */
+
+.pricing .offer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    260px circle at var(--pricing-mx, 50%) var(--pricing-my, 50%),
+    rgba(var(--acc-rgb, var(--tint-rgb)), .07),
+    transparent 65%
+  );
+  opacity: 0;
+  transition: opacity .3s ease;
+  pointer-events: none;
+}
+.pricing .offer:hover::after { opacity: 1; }
+
+/* --------------------------------------------------------------------------
+   11. will-change DISCIPLINE  (motion-system §C.7)
+
+   Never in a base rule. `.is-live` is added and removed by the section's
+   ScrollTrigger onToggle, so these layers are promoted only while the scrub
+   window is actually active. Twelve sections holding permanent compositor
+   layers is a memory problem on mobile Safari long before it is a win — and
+   this section has more animated boxes than any other.
+
+   The two magnetic CTAs are deliberately absent: Framer Motion applies and
+   removes will-change around its own animations, which is why `.mag` (a
+   permanent hint) was dropped rather than ported.
+   -------------------------------------------------------------------------- */
+
+.pricing .offer,
+.pricing .free-strip,
+.pricing .software-block,
+.pricing .seg-wrap,
+.pricing .compare-lead,
+.pricing .compare-note,
+.pricing .pricing-fineprint,
+.pricing .pricing__line,
+.pricing .section-head .mono-label,
+.pricing .section-head > p { will-change: auto; }
+
+.pricing.is-live .offer,
+.pricing.is-live .free-strip,
+.pricing.is-live .software-block,
+.pricing.is-live .seg-wrap,
+.pricing.is-live .compare-lead,
+.pricing.is-live .compare-note,
+.pricing.is-live .pricing-fineprint,
+.pricing.is-live .section-head .mono-label,
+.pricing.is-live .section-head > p { will-change: transform, opacity; }
+
+.pricing.is-live .pricing__line { will-change: transform; }
+
+/* --------------------------------------------------------------------------
+   12. TABLET, <=1080px  (legacy 1491-1508)
+   The grid drops to one column and centres, so the artificial baseline on
+   .offer-intro has nothing left to align to.
+   The shared `.section-head { grid-template-columns: 1fr }` half of this
+   legacy block lives in components.css §11. Not repeated.
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 1080px) {
+  .pricing .offers-grid {
+    grid-template-columns: 1fr;
+    max-width: 560px;
+    margin-inline: auto;
+  }
+  .pricing .offer-intro { min-height: 0; }
+}
+
+/* --------------------------------------------------------------------------
+   13. <=900px  (legacy 1283-1289) — software block only
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 900px) {
+  .pricing .software-block { grid-template-columns: 1fr; }
+  .pricing .sw-foot { grid-column: 1; justify-items: stretch; }
+  .pricing .sw-foot .cta { justify-content: center; }
+}
+
+/* --------------------------------------------------------------------------
+   14. COMPARE TABLE ON A PHONE, <=760px  (legacy 1222-1229)
+
+   nowrap plus long row labels made the sticky column swallow the viewport, and
+   the fading gradient let values show through underneath it. So on a phone the
+   label column is a fixed 136px, wraps, and swaps the gradient for a solid
+   fill plus a right-hand shadow.
+
+   `.compare-scroll::after` carries COPY in a `content:` string — "Scroll →",
+   mobile only, U+2192. It is a real user-visible string and is therefore
+   reproduced exactly.
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 760px) {
+  .pricing .compare { min-width: 560px; }
+  .pricing .compare th,
+  .pricing .compare td { padding: 11px 12px; font-size: 12.5px; }
+  .pricing .compare tbody th {
+    white-space: normal;
+    width: 136px;
+    min-width: 136px;
+    max-width: 136px;
+    font-size: 12px;
+    line-height: 1.35;
+    background: var(--bg);
+    box-shadow: 9px 0 12px -8px rgba(var(--tint-rgb), .14);
+  }
+  .pricing .ct-h { font-size: 13px; }
+  .pricing .compare-scroll::after {
+    content: "Scroll →";
+    display: block;
+    padding: 8px 16px 12px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--muted-2);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   15. MOBILE, <=760px  (legacy 1513, 1597-1614)
+
+   `section.band { padding: 56px 0 }`, `.section-head { margin-bottom: 28px }`,
+   `html body { font-size: 15px }` and the 48px CTA touch floor are shared and
+   live in components.css §11. Not repeated.
+
+   The .seg-btn goes column so the −15% pill sits BELOW the word Both; that
+   plus min-height 44px is the touch-target floor. The thumb math survives
+   unchanged: the track becomes repeat(3, 1fr) at full width and
+   calc((100% - 8px) / 3) still equals exactly one column.
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 760px) {
+  .pricing .seg-wrap { margin-bottom: 32px; }
+  .pricing .seg { grid-template-columns: repeat(3, 1fr); width: 100%; }
+  .pricing .seg-btn {
+    font-size: 10px;
+    letter-spacing: .06em;
+    min-height: 44px;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .pricing .seg-save { font-size: 8px; padding: 2px 6px; }
+
+  .pricing .offer { padding: 24px 22px; border-radius: 18px; gap: 14px; }
+  .pricing .price .number { font-size: 36px; }
+
+  .pricing .free-strip { grid-template-columns: 1fr; gap: 20px; padding: 22px 20px; }
+  /* The vertical divider is for the two-column desktop layout; stacked it
+     renders as a stray stub. The price stays large here — it is the main CTA. */
+  .pricing .fs-side {
+    justify-items: stretch;
+    border-left: 0;
+    padding-left: 0;
+    border-top: 1px solid rgba(var(--tint-rgb), .14);
+    padding-top: 20px;
+  }
+  .pricing .fs-side .price { justify-content: center; }
+  .pricing .fs-side .price .number { font-size: 68px; }
+  .pricing .fs-side .price .currency { font-size: 22px; }
+  .pricing .fs-list { gap: 7px 16px; }
+}
+
+/* --------------------------------------------------------------------------
+   16. REDUCED MOTION
+
+   Expressed in BOTH places on purpose, exactly as legacy does it: the pointer
+   effects are never wired in JS AND the layers are removed in CSS. A port that
+   did only the JS half would still paint the spotlight on hover; one that did
+   only the CSS half would run pointermove handlers for nothing.
+
+   The thumb's slide is GSAP's now, so its reduced-motion branch lives in
+   Pricing.jsx (a gsap.set instead of a gsap.to — it teleports, as legacy's
+   `transition: none` made it do). Everything below is the CSS half: prices
+   swap with no fade-up, feature lists appear instantly, the save pill does not
+   pop, the conic ring stops spinning, and the spotlight is gone.
+
+   The section's scroll timeline is not disabled here — it is never created.
+   That branch lives in Pricing.jsx's matchMedia, where every animated target
+   is gsap.set() to its final state instead.
+
+   `.cta::after` (the shine sweep) and `.mag` are handled in components.css §12
+   and are not repeated.
+   -------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .pricing .offer::after { display: none; }
+
+  .pricing .pricing__ring,
+  .pricing .price.swap .number,
+  .pricing .price.swap .period,
+  .pricing .feature-list li.fl-in,
+  .pricing .save-pill { animation: none; }
+
+  /* Exactly legacy's list for this section — legacy kills every transition on
+     the thumb, not just the transform one. The channel-driven COLOUR
+     transitions elsewhere (.free-strip's border, .fs-badge's fill, the tinted
+     ::before bullets) are deliberately left alone, as legacy leaves them:
+     prefers-reduced-motion is about movement, and quietly turning off the
+     colour cross-fades would be a restyle, not a fix. */
+  .pricing .seg-thumb { transition: none; }
+}

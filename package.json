@@ -18,5 +18,11 @@
   "devDependencies": {
     "@vitejs/plugin-react": "^6.0.4",
     "vite": "^8.1.5"
-  }
+  },
+  "browserslist": [
+    ">0.3%",
+    "last 2 versions",
+    "Firefox ESR",
+    "not dead"
+  ]
 }

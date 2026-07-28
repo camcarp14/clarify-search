@@ -1,0 +1,419 @@
+/* ==========================================================================
+   COVERAGE — two channels, one system.
+   Layout only. Every timing / distance / stagger number lives in
+   coverage.motion.js.
+
+   Ported from legacy/index.html 631-679, plus the 1080px and 760px overrides
+   at 1491-1508 and 1542-1580. Legacy class names are kept (.cov-grid,
+   .cov-panel, .cov-tag, .cov-list, .cov-spine, .spine-node, .spine-title)
+   because both the section spec and motion-system §B.4 address the storyboard
+   by those names. Every rule is scoped under `.coverage`, the section root's
+   own class, so nothing in this file can reach another builder's markup —
+   twelve sections share one cascade and the collisions would be silent
+   (motion-system §C.2). Elements that did not exist in legacy and are here
+   purely to be animated carry the block prefix: .coverage__rail,
+   .coverage__tag-inner, .coverage__line.
+
+   NOT PORTED, deliberately:
+     - `.reveal` / `.reveal.stagger` / `.in` on .section-head and .cov-grid.
+       The whole IntersectionObserver reveal system is retired (motion-system
+       §0.1); this section's entrance is a scrubbed GSAP timeline.
+     - the legacy cursor-spotlight class hook on the two panels. Same ban
+       (§C.2). The spotlight effect itself survives — it is a pointer
+       micro-interaction, not a scroll reveal — and is reimplemented below,
+       scoped to this section, on --cov-mx / --cov-my.
+
+   NOT DECLARED HERE, because components.css already owns it:
+     .shell, section.band, section.band.tinted, .section-head, .lede,
+     .mono-label, h2 .ital, the --pad breakpoints, `:where(ul) { margin: 0 }`
+     (spec R7), and the `:is(.band …) :is(h1,h2,h3)` weight/leading fix
+     (spec R6). Do not re-declare any of them here.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   0. UNDOING THE RETIRED REVEAL SYSTEM
+
+   components.css §10 sets `.section-head h2 { clip-path: inset(0 0 106% 0) }`
+   and only ever opens it again via `.reveal.in h2`. This section does not use
+   `.reveal`, so without this override the H2 would be clipped to nothing for
+   the entire life of the page and the SplitText masks would animate inside an
+   invisible box. This is the single highest-value rule in the file.
+   -------------------------------------------------------------------------- */
+
+.coverage .section-head h2 {
+  clip-path: none;
+  transition: none;
+}
+
+/* --------------------------------------------------------------------------
+   1. GRID
+   The 218px middle column is a fixed spine width; the two panels split the
+   remainder. `align-items: stretch` keeps both panels the same height whatever
+   their list lengths are — do not switch it to `start`.
+   -------------------------------------------------------------------------- */
+
+.coverage .cov-grid {
+  display: grid;
+  grid-template-columns: 1fr 218px 1fr;
+  gap: 20px;
+  align-items: stretch;
+}
+
+/* --------------------------------------------------------------------------
+   2. PANELS
+   -------------------------------------------------------------------------- */
+
+.coverage .cov-panel {
+  position: relative;
+  /* Keeps both the 2px top rule and the spotlight layer inside the rounded
+     corners. Removing it leaks both past the radius. */
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 30px 28px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--surface);
+}
+
+/* 2px accent rule across the top, fed by the --cov-acc variable the .paid /
+   .org modifier sets. --cov-acc is section-local and is the only custom
+   property in this build that is not in tokens.css. */
+.coverage .cov-panel::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--cov-acc, var(--line-strong));
+}
+
+.coverage .cov-panel.paid { --cov-acc: linear-gradient(90deg, var(--amber), transparent); }
+.coverage .cov-panel.org  { --cov-acc: linear-gradient(90deg, var(--mint), transparent); }
+
+/* --------------------------------------------------------------------------
+   3. PANEL TAG — and its mask
+
+   STRUCTURAL DIVERGENCE FROM LEGACY, required by the storyboard. §B.4 has the
+   two tags "mask up last", so the legacy single <span class="cov-tag"> becomes
+   a mask (overflow:hidden) wrapping an inner span that translates. Nothing
+   about the rendered type changes: the mask has no padding, no border and no
+   background, and both boxes are exactly one line tall.
+
+   All-caps mono has no descenders, so a plain `overflow: hidden` is a clean
+   mask edge here — no padding/negative-margin insurance needed (unlike
+   .hero__line-mask, which masks mixed-case display type).
+   -------------------------------------------------------------------------- */
+
+.coverage .cov-tag {
+  display: block;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+}
+
+.coverage .coverage__tag-inner {
+  display: block;
+}
+
+.coverage .cov-panel.paid .cov-tag { color: var(--amber-soft); }
+.coverage .cov-panel.org  .cov-tag { color: var(--mint-soft); }
+
+/* --------------------------------------------------------------------------
+   4. PANEL BODY
+   -------------------------------------------------------------------------- */
+
+.coverage .cov-panel h3 { font-size: 21px; }
+
+.coverage .cov-panel > p {
+  font-size: 13.5px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.coverage .cov-list {
+  list-style: none;
+  padding: 14px 0 0;
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 10px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.coverage .cov-list li {
+  display: flex;
+  gap: 9px;
+}
+
+/* The bullet is a CSS `content` em dash — correctly invisible to assistive
+   tech, and the same U+2014 character used in the copy. */
+.coverage .cov-panel.paid .cov-list li::before { content: "—"; color: var(--amber); flex-shrink: 0; }
+.coverage .cov-panel.org  .cov-list li::before { content: "—"; color: var(--mint);  flex-shrink: 0; }
+
+/* --------------------------------------------------------------------------
+   5. SPINE
+
+   `position: relative` is load-bearing twice over: it is the containing block
+   for the two rails, and — because absolutely positioned children of a grid
+   container are taken out of grid flow — it is what stops the rails from
+   claiming grid cells of their own.
+   -------------------------------------------------------------------------- */
+
+.coverage .cov-spine {
+  display: grid;
+  align-content: center;
+  gap: 10px;
+  position: relative;
+  padding: 10px 0;
+}
+
+/* --------------------------------------------------------------------------
+   6. THE DRAWN RULE
+
+   Legacy paints this with `.cov-spine::before`. GSAP cannot target a
+   pseudo-element, and §B.4 requires the rule to be a scrubbed rail, so it is
+   two real elements here. Same geometry, same amber→mint gradient, same .4
+   opacity.
+
+   TWO of them because the CSS orientation flips at 1080px (the layout
+   breakpoint) while the motion storyboard flips at 900px (MEDIA.mobile). CSS
+   displays exactly one; the timeline drives both, in both branches, from the
+   same window. That way the 900-1080px band — desktop storyboard, stacked
+   layout — always has a correctly-drawn rule.
+
+   Only `scale` is ever animated. left/top/right/bottom/width/height here are
+   static geometry, set once, never touched by a tween.
+   -------------------------------------------------------------------------- */
+
+.coverage .coverage__rail {
+  position: absolute;
+  opacity: .4;
+  pointer-events: none;
+}
+
+/* Vertical: the >1080px form. Draws downward from the top edge.
+   `left: 50%` with no centring translate is legacy's exact geometry — the 1px
+   rule sits a half pixel right of centre. Reproduced rather than "fixed". */
+.coverage .coverage__rail--v {
+  top: -8px;
+  bottom: -8px;
+  left: 50%;
+  width: 1px;
+  background: linear-gradient(180deg, transparent, var(--amber), var(--mint), transparent);
+  transform-origin: 50% 0;
+}
+
+/* Horizontal: the <=1080px form, hidden until that breakpoint. Sits in the
+   20px grid gap above the spine block, so it reads as a rule drawn BETWEEN the
+   two stacked panels. Draws left to right. */
+.coverage .coverage__rail--h {
+  display: none;
+  top: -10px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--amber), var(--mint), transparent);
+  transform-origin: 0 50%;
+}
+
+/* --------------------------------------------------------------------------
+   7. SPINE NODES AND TITLE
+
+   The nodes sit ABOVE the rule: z-index 1 plus an opaque --panel background is
+   what makes the hairline read as passing behind them. Both are required.
+   `.spine-node strong` breaks out of the mono/uppercase treatment of its
+   parent by overriding three inherited properties at once.
+   -------------------------------------------------------------------------- */
+
+.coverage .spine-node {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  padding: 12px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--panel);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.coverage .spine-node strong {
+  display: block;
+  color: var(--ink);
+  font-size: 15px;
+  letter-spacing: 0;
+  font-family: var(--font-display);
+  text-transform: none;
+}
+
+.coverage .spine-title {
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+  position: relative;
+  z-index: 1;
+  padding: 4px 0;
+}
+
+/* --------------------------------------------------------------------------
+   8. SPLITTEXT LINES
+
+   SplitText is created with `mask: 'lines'`, which wraps each line box in a
+   `<linesClass>-mask` element. The mask is what clips; the line is what
+   translates.
+   -------------------------------------------------------------------------- */
+
+.coverage .coverage__line { display: block; }
+
+.coverage .coverage__line-mask {
+  display: block;
+  /* Extends the clip box below the baseline so descenders are not shaved,
+     without changing where the next line sits. Same trick as .hero__line-mask. */
+  overflow: hidden;
+  padding-bottom: .12em;
+  margin-bottom: -.12em;
+}
+
+/* --------------------------------------------------------------------------
+   9. CURSOR SPOTLIGHT
+
+   The legacy spotlight pseudo-element (legacy 873-879), reimplemented locally
+   because its class hook is retired by name (motion-system §0.1 / §C.2).
+   Identical values; only the custom-property names are section-scoped.
+
+   The tint is the NEUTRAL ink fallback, not amber or mint. Legacy defines
+   --acc-rgb on #pricing and #ai-build only, never on or above #coverage, so
+   both panels here share one neutral spotlight. That is the shipping look —
+   do not "improve" it by wiring the panel accent in (spec §3.2).
+
+   Visibility is CSS-driven: the layer is opacity 0 and :hover reveals it. JS
+   only moves the gradient centre.
+   -------------------------------------------------------------------------- */
+
+.coverage .cov-panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    260px circle at var(--cov-mx, 50%) var(--cov-my, 50%),
+    rgba(var(--acc-rgb, var(--tint-rgb)), .07),
+    transparent 65%
+  );
+  opacity: 0;
+  transition: opacity .3s ease;
+  pointer-events: none;
+}
+
+.coverage .cov-panel:hover::after { opacity: 1; }
+
+/* --------------------------------------------------------------------------
+   10. will-change DISCIPLINE  (motion-system §C.7)
+
+   Never in a base rule. `.is-live` is added and removed by the section's
+   ScrollTrigger onToggle, so these layers are promoted only while the scrub
+   window is actually active. Twelve sections holding permanent compositor
+   layers is a memory problem on mobile Safari long before it is a win.
+   -------------------------------------------------------------------------- */
+
+.coverage .cov-panel,
+.coverage .coverage__rail,
+.coverage .spine-node,
+.coverage .spine-title,
+.coverage .coverage__tag-inner,
+.coverage .coverage__line,
+.coverage .section-head .mono-label,
+.coverage .section-head > p { will-change: auto; }
+
+.coverage.is-live .cov-panel,
+.coverage.is-live .coverage__rail,
+.coverage.is-live .coverage__tag-inner,
+.coverage.is-live .coverage__line { will-change: transform; }
+
+.coverage.is-live .spine-node,
+.coverage.is-live .spine-title,
+.coverage.is-live .section-head .mono-label,
+.coverage.is-live .section-head > p { will-change: transform, opacity; }
+
+/* --------------------------------------------------------------------------
+   11. TABLET, <=1080px  (legacy 1491-1508)
+
+   The whole layout inverts here: .cov-grid stacks to one column, so
+   paid / spine / organic become three stacked blocks in source order. The
+   spine stops being a column and becomes a 2x2 grid of nodes with the title
+   spanning both, and the vertical rule is swapped for the horizontal one —
+   a vertical hairline makes no sense once the spine is wider than it is tall.
+
+   The shared `.section-head { grid-template-columns: 1fr }` half of this
+   legacy block lives in components.css §11. Not repeated.
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 1080px) {
+  .coverage .cov-grid { grid-template-columns: 1fr; }
+
+  .coverage .cov-spine {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    /* The 10px block padding only existed for the vertical form. */
+    padding: 0;
+  }
+
+  .coverage .spine-title { grid-column: 1 / -1; }
+
+  .coverage .coverage__rail--v { display: none; }
+  .coverage .coverage__rail--h { display: block; }
+}
+
+/* --------------------------------------------------------------------------
+   12. MOBILE, <=760px  (legacy 1513, 1542-1543, 1577-1580)
+
+   `section.band { padding: 56px 0 }`, `.section-head { margin-bottom: 28px }`
+   and `html body { font-size: 15px }` are shared and live in components.css
+   §11. Legacy's `.cov-spine { grid-template-columns: 1fr 1fr }` here is a
+   redundant restatement of the repeat(2, 1fr) already inherited from the
+   1080px block — dropped, the rendering is identical.
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 760px) {
+  .coverage .cov-panel { padding: 24px 20px; }
+
+  .coverage .spine-node {
+    padding: 10px 8px;
+    font-size: 9.5px;
+  }
+
+  .coverage .spine-node strong { font-size: 14px; }
+}
+
+/* --------------------------------------------------------------------------
+   13. REDUCED MOTION
+
+   Expressed twice on purpose, exactly as legacy does it (spec R14): the
+   spotlight handler is never attached in JS, AND the layer is removed in CSS.
+   A port that only did the JS half would still paint the ::after on hover;
+   one that only did the CSS half would run pointermove handlers for nothing.
+
+   The section's scroll timeline is not disabled here — it is never created.
+   That branch lives in Coverage.jsx's matchMedia, where every animated target
+   is gsap.set() to its final state instead.
+   -------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .coverage .cov-panel::after { display: none; }
+}

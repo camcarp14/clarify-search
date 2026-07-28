@@ -1,0 +1,625 @@
+/* ==========================================================================
+   AI SEARCH VISIBILITY — #ai-visibility
+   Layout and paint only. Every timing, distance, stagger and pin length lives
+   in aiVisibility.motion.js.
+
+   Transcribed from legacy/index.html lines 681–781 plus the responsive blocks
+   at 1491 and 1513. Divergences are marked and justified inline; there are
+   three kinds and nothing else:
+     FIX   — a WCAG AA contrast failure on shipping text, fixed the same way
+             components.css §2 fixed .mono-label: one step down the same warm
+             ramp, never a new hue.
+     PIN   — forced by the fact that this section holds the viewport. A pinned
+             frame the content does not fit is content nobody can read.
+     MOTION— an element or property the storyboard (§B.5) requires and legacy
+             has no equivalent for.
+
+   `.pill.p-ai` (legacy 782) is filed in this region of the legacy stylesheet
+   but belongs to #why. It lives in components.css §8 and is not repeated here.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   PINNED STAGE
+   -------------------------------------------------------------------------- */
+
+/* PIN. `section.band` ships `padding: 116px 0` (components.css §1). On a
+   pinned section that padding has to live INSIDE the pinned element, or the
+   section box is 100vh + 232px, the pin spacer inherits the difference, and
+   the band's own air turns into dead scroll on both sides of the set-piece.
+   The border-top is left alone — it is the seam with #coverage. */
+section.band#ai-visibility {
+  padding: 0;
+}
+
+#ai-visibility .aiviz__stage {
+  /* One lever for the whole pinned frame's air. Tighten this first if the
+     stage does not fit a viewport. */
+  --aiviz-stage-pad: clamp(40px, 7vh, 116px);
+
+  min-height: 100vh;
+  /* svh is the SMALL viewport — the height with a mobile URL bar expanded.
+     Sizing the pinned frame to the smallest case is what stops the closing
+     note (its beat is 0.86 → 1.00) being pushed under the fold when the bar is
+     showing. Dropped by engines without svh, which fall back to the line
+     above. */
+  min-height: 100svh;
+
+  display: grid;
+  /* `safe center` degrades to `start` when the content is taller than the
+     frame, so an overflow eats the BOTTOM rather than decapitating the
+     heading. The unprefixed value is the fallback for engines without it. */
+  align-content: center;
+  align-content: safe center;
+  padding: var(--aiviz-stage-pad) 0;
+}
+
+/* --------------------------------------------------------------------------
+   SECTION HEAD
+   -------------------------------------------------------------------------- */
+
+/* components.css §10 still ships the legacy reveal system, and its
+   `.section-head h2 { clip-path: inset(0 0 106% 0) }` is UNCONDITIONAL — the
+   heading is clipped to nothing until a `.reveal.in` ancestor opens it. This
+   section is on the GSAP path and never gets that class, so without this
+   override the h2 would be invisible forever. The mask here is SplitText's,
+   which is a transform inside an overflow:hidden wrapper — no clip-path, no
+   CSS transition, nothing for the scrub to fight. */
+#ai-visibility .section-head h2 {
+  clip-path: none;
+  transition: none;
+}
+
+/* legacy 682-683. */
+#ai-visibility .mono-label { color: var(--iris-soft); }
+#ai-visibility h2 .ital { color: var(--iris-soft); }
+
+/* SplitText writes overflow:hidden inline on the mask wrappers; these are
+   belt-and-braces plus the padding that stops the Instrument Serif italic's
+   tail and any descender being shaved by the mask edge. Same pair as
+   Hero.css's .hero__line / .hero__line-mask. */
+#ai-visibility .aiviz__line,
+#ai-visibility .aiviz__note-line { display: block; }
+
+#ai-visibility .aiviz__line-mask,
+#ai-visibility .aiviz__note-line-mask {
+  display: block;
+  overflow: hidden;
+  padding-bottom: .12em;
+  margin-bottom: -.12em;
+}
+
+/* --------------------------------------------------------------------------
+   GRID
+   legacy 684.
+   -------------------------------------------------------------------------- */
+
+#ai-visibility .ai-grid {
+  display: grid;
+  grid-template-columns: .96fr 1.04fr;
+  gap: 40px;
+  align-items: start;
+}
+
+/* --------------------------------------------------------------------------
+   SERP MOCK
+   legacy 686-745. A results page, drawn rather than described — the AI answer
+   sits on top, ads under it, rankings under that, all feeding the answer.
+
+   The `.instrument, .serp, .mock` token re-point (white panel, re-pointed
+   --surface / --line so the inset rows stay visible against white) lives in
+   components.css §7 and is NOT repeated here.
+   -------------------------------------------------------------------------- */
+
+#ai-visibility .serp {
+  border: 1px solid rgba(var(--tint-rgb), .14);
+  border-radius: 16px;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(var(--iris-rgb), .06), rgba(var(--iris-rgb), 0) 58%),
+    #fffdf8;
+  display: grid;
+  align-content: start;
+}
+
+#ai-visibility .serp-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  border-bottom: 1px solid rgba(var(--tint-rgb), .11);
+  background: rgba(var(--tint-rgb), .04);
+}
+
+#ai-visibility .serp-dots { display: flex; gap: 5px; }
+#ai-visibility .serp-dots i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(var(--tint-rgb), .16);
+}
+
+#ai-visibility .serp-q {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex: 1;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(var(--tint-rgb), .14);
+  background: rgba(var(--tint-rgb), .03);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--muted);
+  /* MOTION. The query is split into chars and scrubbed; keeping it clipped to
+     the omnibox means a mid-scrub state can never push the pill open. */
+  overflow: hidden;
+}
+#ai-visibility .serp-q svg { opacity: .5; flex-shrink: 0; }
+
+/* MOTION. The query text needs its own element so SplitText has something to
+   split that is not the magnifier SVG, and the caret needs to sit hard against
+   the last character rather than a `gap` away from it. */
+#ai-visibility .aiviz__typed {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+#ai-visibility .aiviz__query { white-space: nowrap; }
+#ai-visibility .aiviz__char { display: inline-block; }
+
+/* The caret is a stacked layer with a CSS blink. It is deliberately NOT a GSAP
+   target — a scrubbed caret would stop blinking whenever the user stops
+   scrolling, which reads as the mock freezing rather than as a cursor. */
+#ai-visibility .aiviz__caret {
+  width: 1px;
+  height: 1.05em;
+  background: currentColor;
+  opacity: .55;
+  animation: aivizCaret 1.05s steps(1, end) infinite;
+}
+@keyframes aivizCaret {
+  0%, 49% { opacity: .55; }
+  50%, 100% { opacity: 0; }
+}
+
+/* MOTION. Clip container for the assembly. The three rows enter from ABOVE
+   their slots and have to be cut off at the top of the results area rather
+   than sliding over the omnibox; the citation rails hang out of the AI row's
+   bottom edge and have to be cut off at the panel's. `.serp`'s own
+   overflow:hidden cannot do the first job, because the omnibox is inside it. */
+#ai-visibility .aiviz__rows {
+  position: relative;
+  overflow: hidden;
+}
+
+#ai-visibility .serp-row {
+  position: relative;
+  display: grid;
+  gap: 7px;
+  padding: 15px 16px 15px 20px;
+  border-bottom: 1px solid rgba(var(--tint-rgb), .08);
+}
+#ai-visibility .serp-row:last-child { border-bottom: 0; }
+
+#ai-visibility .serp-row::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--row-acc);
+}
+
+/* One variable per row, three consumers: the 3px left rail, the tag colour and
+   the skeleton headline bar. Kept as one variable rather than hard-coded per
+   row, exactly as legacy has it.
+
+   FIX — `--row-acc-text` is new. Legacy pointed `.serp-tag` at `--row-acc`,
+   which puts 9px/600 text at --amber (3.49:1) and --mint (3.72:1) on the
+   #fffdf8 mock. Both fail WCAG AA (4.5:1 required; the large-text exemption
+   needs 18.66px bold). These are not decorations — spec §2.2 is explicit that
+   the SERP rows are exposed to assistive tech on purpose because they carry
+   the argument. The `-soft` variants are the next step down the same ramp and
+   measure 5.70:1 (amber), 6.40:1 (mint) and 8.18:1 (iris). The RAIL and the
+   SKELETON BAR keep the bright `--row-acc` — they are not text, so nothing is
+   lost visually.
+
+   R-9: the lavender literals below are legacy's `rgba(154,140,255,…)` and are
+   NOT `--iris` (#6a59db). They are left as literals on purpose — repointing
+   them at --iris-rgb visibly darkens the AI row. See the note in the return
+   value: components.css §8 made the opposite call for `.pill.p-ai`, and a
+   human needs to settle which way the site goes. */
+#ai-visibility .serp-row.r-ai {
+  --row-acc: var(--iris);
+  --row-acc-text: var(--iris-soft);
+  background: rgba(154, 140, 255, .08);
+  /* MOTION. Lifts the AI row (and therefore the connector rails that hang out
+     of its bottom edge) above the two rows the rails have to cross. The boxes
+     themselves never overlap, so nothing else changes. */
+  z-index: 2;
+}
+#ai-visibility .serp-row.r-paid {
+  --row-acc: var(--amber);
+  --row-acc-text: var(--amber-soft);
+}
+#ai-visibility .serp-row.r-org {
+  --row-acc: var(--mint);
+  --row-acc-text: var(--mint-soft);
+}
+
+#ai-visibility .serp-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--row-acc-text); /* FIX — see above. Legacy: var(--row-acc). */
+}
+
+#ai-visibility .serp-new {
+  font-size: 8px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid rgba(154, 140, 255, .5);
+  background: rgba(154, 140, 255, .12);
+}
+
+#ai-visibility .serp-ai-copy {
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ink);
+}
+#ai-visibility .serp-ai-copy .cite {
+  color: var(--iris-soft);
+  border-bottom: 1px dotted rgba(154, 140, 255, .6);
+}
+
+#ai-visibility .serp-cites {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+#ai-visibility .serp-cites i {
+  width: 15px;
+  height: 15px;
+  border-radius: 4px;
+  background: rgba(154, 140, 255, .28);
+  border: 1px solid rgba(154, 140, 255, .45);
+}
+/* An <em> used purely as a styling hook — CSS turns the italic back off. Not
+   semantic emphasis, but it is what legacy ships, so it stays an <em>.
+   FIX — legacy: var(--muted-2) (#948a7b, 3.36:1 at 9px). --muted is 6.07:1. */
+#ai-visibility .serp-cites em {
+  font-style: normal;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* FIX — legacy: var(--muted-2), 3.36:1 at 10px. */
+#ai-visibility .serp-url {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--muted);
+}
+
+/* Deliberately empty skeleton bars. Styled boxes, no text, no aria treatment —
+   `--w` comes from an inline style on the element (R-3). */
+#ai-visibility .serp-title {
+  height: 9px;
+  width: 58%;
+  border-radius: 99px;
+  background: var(--row-acc);
+  opacity: .8;
+}
+#ai-visibility .serp-line {
+  height: 5px;
+  width: var(--w, 80%);
+  border-radius: 99px;
+  background: rgba(var(--tint-rgb), .13);
+}
+
+/* FIX — legacy: var(--muted-2), 3.36:1 at 11.5px. These carry real copy
+   ("The clicks you earn — and what the answer above is built from"). */
+#ai-visibility .serp-note {
+  margin-top: 3px;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+/* --------------------------------------------------------------------------
+   MOTION — connector rails (desktop) and the organic underlay (mobile)
+   §B.5's 0.54 → 0.74 beat: the AI answer above is built out of the organic
+   result below. The rails are a GAUGE — they are drawn on EASE.rail and can be
+   parked half-drawn — not a flourish.
+   -------------------------------------------------------------------------- */
+
+#ai-visibility .aiviz__rails {
+  position: absolute;
+  left: 0;
+  /* Hangs from the AI row's bottom edge. `--aiviz-rail-len` is written once,
+     per refresh, by the effect (paid row height + reach into the organic row).
+     It is never tweened — the only animated channel on a rail is scaleY. */
+  top: 100%;
+  height: var(--aiviz-rail-len, 88px);
+  width: 100%;
+  pointer-events: none;
+}
+
+#ai-visibility .aiviz__rail {
+  position: absolute;
+  top: 0;
+  /* Aligned under the citation dots: 20px row padding + half a 15px dot, then
+     one 21px pitch (15px dot + 6px gap) per index. */
+  left: calc(20px + 7.5px + var(--rail-i, 0) * 21px);
+  width: 1px;
+  height: 100%;
+  background: linear-gradient(
+    180deg,
+    rgba(154, 140, 255, .55),
+    rgba(154, 140, 255, .12)
+  );
+  transform-origin: 50% 0;
+}
+
+/* Legacy has no equivalent; this is the mobile stand-in for the rails. Inset
+   3px from the left so it never covers the row's own accent rail. */
+#ai-visibility .aiviz__org-underlay {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 3px;
+  right: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(var(--mint-rgb), .12),
+    rgba(var(--mint-rgb), .02) 70%
+  );
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* --------------------------------------------------------------------------
+   AI CARDS
+   legacy 747-760.
+   -------------------------------------------------------------------------- */
+
+#ai-visibility .ai-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+#ai-visibility .ai-card {
+  display: grid;
+  gap: 7px;
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  transition: border-color .25s ease;
+}
+#ai-visibility .ai-card:hover { border-color: rgba(var(--iris-rgb), .32); }
+
+#ai-visibility .ai-card .ai-num {
+  position: relative;
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .1em;
+}
+
+/* The number's colour change is an opacity cross-fade between two stacked
+   faces (§A.4 rule 2), never a colour tween. The accent face is aria-hidden in
+   the JSX so "01" is not announced twice. The resting face's --muted is a
+   MOTION addition — legacy has no muted state for the number, because legacy
+   never animates it. The FINAL rendered state (accent at 1, resting at 0) is
+   identical to legacy's `color: var(--iris-soft)`. */
+#ai-visibility .aiviz__num-face { display: block; }
+#ai-visibility .aiviz__num-face--rest { color: var(--muted); }
+#ai-visibility .aiviz__num-face--accent {
+  position: absolute;
+  inset: 0;
+  color: var(--iris-soft);
+  opacity: 0;
+}
+
+#ai-visibility .ai-card h3 { font-size: 16px; letter-spacing: -.01em; }
+#ai-visibility .ai-card p { font-size: 13px; line-height: 1.55; color: var(--muted); }
+
+/* --------------------------------------------------------------------------
+   CLOSING NOTE
+   legacy 762-780.
+   -------------------------------------------------------------------------- */
+
+#ai-visibility .ai-note {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 24px;
+  padding: 20px 26px;
+  border: 1px solid rgba(var(--iris-rgb), .22);
+  background: linear-gradient(
+    90deg,
+    rgba(var(--iris-rgb), .07),
+    rgba(var(--mint-rgb), .05)
+  );
+  border-radius: 16px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+#ai-visibility .ai-note strong { color: var(--ink); font-weight: 600; }
+
+#ai-visibility .ai-note-mark {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--iris-soft);
+  border: 1px solid rgba(var(--iris-rgb), .4);
+  background: rgba(var(--iris-rgb), .08);
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+/* --------------------------------------------------------------------------
+   WILL-CHANGE DISCIPLINE (§C.7)
+   Never in a base rule. `.is-live` is added and removed by the pinned
+   trigger's onToggle, so the compositor layers exist only while this section
+   actually holds the viewport.
+   -------------------------------------------------------------------------- */
+
+#ai-visibility .serp-row,
+#ai-visibility .ai-card,
+#ai-visibility .ai-note,
+#ai-visibility .aiviz__rail,
+#ai-visibility .aiviz__char { will-change: auto; }
+
+#ai-visibility.is-live .serp-row,
+#ai-visibility.is-live .ai-card,
+#ai-visibility.is-live .ai-note,
+#ai-visibility.is-live .aiviz__rail,
+#ai-visibility.is-live .aiviz__char { will-change: transform, opacity; }
+
+/* --------------------------------------------------------------------------
+   RESPONSIVE
+
+   PIN. Legacy stacks `.ai-grid` at 1080px (line 1491) and drops `.ai-cards` to
+   one column at 760px (line 1513). Neither survives contact with a pin:
+     - stacking at 1080 makes the stage ~1050px tall on a 900-1080px-wide
+       desktop, which is taller than the viewport it is pinned inside, so the
+       closing note is unreachable for the whole set-piece;
+     - one column at 760 makes it taller still, and §B.5's mobile storyboard
+       explicitly calls for "a 2x2 arriving in two beats".
+   So the stack moves to 899px — the SAME boundary as the motion breakpoint, so
+   the layout and the storyboard change together — and the cards stay 2-up at
+   every width. This is the one place where the pin overrides the legacy
+   layout, and it is called out in the return value.
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 899px) {
+  #ai-visibility .aiviz__stage { --aiviz-stage-pad: 18px; }
+
+  #ai-visibility .section-head { margin-bottom: 16px; gap: 10px; }
+  #ai-visibility .section-head h2 { font-size: clamp(21px, 5.8vw, 28px); }
+  #ai-visibility .section-head > p { font-size: 12.5px; line-height: 1.5; }
+  #ai-visibility .mono-label { font-size: 9.5px; letter-spacing: .18em; }
+
+  #ai-visibility .ai-grid { grid-template-columns: 1fr; gap: 12px; }
+
+  #ai-visibility .serp-bar { padding: 8px 12px; gap: 9px; }
+  #ai-visibility .serp-row { padding: 10px 12px 10px 16px; gap: 5px; }
+  #ai-visibility .serp-ai-copy { font-size: 11.5px; line-height: 1.45; }
+  #ai-visibility .serp-note { font-size: 10.5px; line-height: 1.35; margin-top: 2px; }
+  #ai-visibility .serp-cites i { width: 12px; height: 12px; }
+
+  #ai-visibility .ai-cards { gap: 8px; }
+  #ai-visibility .ai-card { padding: 11px 12px; gap: 3px; border-radius: 12px; }
+  #ai-visibility .ai-card h3 { font-size: 13px; }
+  #ai-visibility .ai-card p { font-size: 10.5px; line-height: 1.38; }
+
+  #ai-visibility .ai-note {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    margin-top: 10px;
+    padding: 11px 13px;
+    font-size: 11.5px;
+    line-height: 1.45;
+  }
+  #ai-visibility .ai-note-mark { width: 24px; height: 24px; border-radius: 7px; }
+
+  /* The rails are omitted below the motion breakpoint (§B.5 mobile): three 1px
+     verticals at 390px are sub-pixel mush. `.aiviz__org-underlay` carries the
+     same beat instead. The effect skips their tween on this branch; this rule
+     is what guarantees they cannot appear even if it did not. */
+  #ai-visibility .aiviz__rails { display: none; }
+}
+
+/* Short viewports at any width — small laptops, tablets in landscape. Buys
+   back roughly 90px of stage height without touching type sizes. */
+@media (min-width: 900px) and (max-height: 880px) {
+  #ai-visibility .aiviz__stage { --aiviz-stage-pad: 40px; }
+  #ai-visibility .section-head { margin-bottom: 32px; gap: 34px; }
+  #ai-visibility .ai-grid { gap: 28px; }
+  #ai-visibility .ai-card { padding: 16px 18px; }
+  #ai-visibility .ai-note { margin-top: 16px; padding: 14px 18px; }
+}
+
+/* --------------------------------------------------------------------------
+   REDUCED MOTION
+   The effect's reduced branch creates no timeline, no trigger and NO PIN, and
+   gsap.set()s every animated target to its final state. Two things it cannot
+   do from JS are handled here.
+   -------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  /* Without a pin the stage has no reason to reserve a viewport. */
+  #ai-visibility .aiviz__stage {
+    min-height: 0;
+    padding: 116px 0;
+  }
+  #ai-visibility .aiviz__caret { animation: none; }
+}
+
+@media (prefers-reduced-motion: reduce) and (max-width: 899px) {
+  #ai-visibility .aiviz__stage { padding: 56px 0; }
+
+  /* The organic underlay's final state is breakpoint-dependent: 0 on desktop,
+     1 on mobile where it stands in for the connector rails. The reduced branch
+     in the effect cannot see the width — CONDITIONS.isMobile requires
+     no-preference and is false by construction there — so it deliberately does
+     NOT write an inline opacity, and this rule owns the mobile final state. */
+  #ai-visibility .aiviz__org-underlay { opacity: 1; }
+
+  /* Every size in the mobile block above was shrunk to fit a PINNED viewport.
+     There is no pin on this branch, so none of that cost is owed — and making
+     the people who asked for less motion read 10.5px body copy would be a
+     straightforwardly worse deal than the one everyone else gets. Legacy's own
+     mobile values are restored, including the one-column card stack it ships
+     at 760px. */
+  #ai-visibility .section-head { margin-bottom: 28px; gap: 12px; }
+  #ai-visibility .section-head h2 { font-size: clamp(31px, 4vw, 54px); }
+  #ai-visibility .section-head > p { font-size: 16px; line-height: 1.65; }
+  #ai-visibility .mono-label { font-size: 11px; letter-spacing: .22em; }
+
+  #ai-visibility .ai-grid { gap: 30px; }
+  #ai-visibility .serp-bar { padding: 11px 14px; gap: 12px; }
+  #ai-visibility .serp-row { padding: 15px 16px 15px 20px; gap: 7px; }
+  #ai-visibility .serp-ai-copy { font-size: 12.5px; line-height: 1.55; }
+  #ai-visibility .serp-note { font-size: 11.5px; line-height: 1.45; margin-top: 3px; }
+  #ai-visibility .serp-cites i { width: 15px; height: 15px; }
+
+  #ai-visibility .ai-cards { gap: 14px; }
+  #ai-visibility .ai-card { padding: 22px; gap: 7px; border-radius: 16px; }
+  #ai-visibility .ai-card h3 { font-size: 16px; }
+  #ai-visibility .ai-card p { font-size: 13px; line-height: 1.55; }
+
+  #ai-visibility .ai-note {
+    margin-top: 24px;
+    padding: 18px 20px;
+    gap: 10px;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  #ai-visibility .ai-note-mark { width: 32px; height: 32px; border-radius: 9px; }
+}
+
+/* legacy 1513 — the one-column card stack, restored where there is no pinned
+   frame to fit it into. */
+@media (prefers-reduced-motion: reduce) and (max-width: 760px) {
+  #ai-visibility .ai-cards { grid-template-columns: 1fr; }
+}

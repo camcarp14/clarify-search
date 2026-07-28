@@ -1,0 +1,297 @@
+/* ==========================================================================
+   FAQ  —  tier: scrub-no-pin (motion-system §B.10)
+
+   Layout only. Every scroll-timeline number lives in faq.motion.js, and the
+   three wall-clock disclosure durations live there too — they arrive here as
+   the custom properties --faq-track-dur / --faq-chevron-dur / --faq-border-dur,
+   published onto the section root by Faq.jsx. The literals in the var()
+   fallbacks below are the same numbers, restated only so this stylesheet still
+   reads correctly on its own; if you retune one, retune both.
+
+   Ported from legacy/index.html 1308-1333 (the block commented "faq"), renamed
+   to the BEM-ish block convention in motion-system §C.2 — block = section slug,
+   so `.faq__item` rather than legacy's bare `.faq` on the <details>. Twelve
+   sections share one cascade and bare names collide silently.
+
+   NOT DECLARED HERE, ON PURPOSE — all of it is already in the shared layer and
+   re-declaring it would silently win the cascade for this section alone:
+     .shell                    components.css §1  (and its --pad breakpoints)
+     section.band / .tinted    components.css §1
+     .lede                     components.css §1  (legacy declared it twice,
+                               once as `.faq-grid .lede`; already collapsed)
+     .mono-label               components.css §2  (with its contrast fix)
+     h2 weight/tracking/leading components.css §0 — the `:is(.band, …) :is(h2)`
+                               rule restores legacy's 600 / -.03em / 1.1, which
+                               base.css alone does not. This section carries
+                               `band`, so it is covered; only the size is local.
+     :focus-visible            base.css
+   ========================================================================== */
+
+.faq__grid {
+  display: grid;
+  grid-template-columns: .8fr 1.2fr;
+  gap: 56px;
+  align-items: start;
+}
+
+.faq__grid h2 {
+  font-size: clamp(26px, 3vw, 40px);
+}
+
+.faq__list {
+  display: grid;
+  gap: 12px;
+}
+
+/* --------------------------------------------------------------------------
+   THE ROW
+   `padding: 0 22px` is horizontal only. All vertical rhythm comes from the
+   summary's `18px 0` and the answer's `0 0 18px`, so a collapsed card is
+   exactly the height of its summary.
+
+   `background: var(--surface)` is rgba(255,255,255,.70) — semi-transparent on
+   purpose, so the tinted band's gradient shows through. Do not substitute an
+   opaque colour.
+   -------------------------------------------------------------------------- */
+
+.faq__item {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  padding: 0 22px;
+  transition: border-color var(--faq-border-dur, 250ms) ease;
+}
+
+.faq__summary {
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 600;
+  padding: 18px 0;
+  /* Both are needed to suppress the native disclosure triangle: list-style for
+     everything current, the ::-webkit- pseudo for older Safari. */
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.faq__summary::-webkit-details-marker {
+  display: none;
+}
+
+/* The chevron. An 8x8 box with only its right and bottom borders, rotated 45deg
+   so it points DOWN when closed and -135deg so it points UP when open.
+
+   Only `transform` is in the transition list, so the -4px → 4px optical
+   centring shift SNAPS while the rotation eases. That asymmetry is the legacy
+   look and it is deliberate — putting margin-top in the transition would also
+   animate a layout property, which motion-system §A.4 #1 forbids outright.
+
+   Left at legacy's --muted-2. This is a non-text UI indicator, so the bar is
+   WCAG 1.4.11's 3:1 rather than the 4.5:1 that applies to text: #948a7b over
+   the .70-white card on the tinted band measures ~3.2:1 and clears it. The
+   state it indicates is also carried by the native <summary> semantics, so it
+   is not the only channel. (Contrast this with .mono-label, which components.css
+   moved OFF --muted-2 because that one is text and was failing at 3.01:1.) */
+.faq__summary::after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  border-right: 2px solid var(--muted-2);
+  border-bottom: 2px solid var(--muted-2);
+  transform: rotate(45deg);
+  transition: transform var(--faq-chevron-dur, 300ms) var(--e-out);
+  margin-top: -4px;
+}
+
+/* --------------------------------------------------------------------------
+   THE HEIGHT ANIMATION — motion-system §A.5, sanctioned exception 2
+   Zero measurement. .faq__body is a one-row grid whose track animates between
+   0fr and 1fr; .faq__clip is the overflow:hidden box that crops the content as
+   the track shrinks. The browser interpolates the intrinsic height, so nothing
+   here reads scrollHeight, getBoundingClientRect or an inline style.height.
+
+   Firefox < 127 and Safari < 16 do not interpolate `fr` tracks and will snap
+   open/closed instead of animating. That is acceptable degradation — it is
+   exactly what legacy does — and it must NOT be "fixed" by switching to a
+   measured max-height, which would change the curve and reintroduce the DOM
+   measurement this whole approach exists to avoid. Faq.jsx's collapse safety
+   timeout is what keeps those browsers correct, since no transition means no
+   transitionend to finalise on.
+   -------------------------------------------------------------------------- */
+
+.faq__body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--faq-track-dur, 400ms) var(--e-out);
+}
+
+.faq__clip {
+  overflow: hidden;
+}
+
+/* The bottom padding sits INSIDE the clipped box, so it animates with the
+   content and the open card gets its breathing room with no jump at the end. */
+.faq__answer {
+  padding: 0 0 18px;
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--muted);
+}
+
+/* --------------------------------------------------------------------------
+   OPEN STATE, PART 1 — the no-JS baseline
+   These three rules key off the native `open` attribute alone, which means the
+   section is fully functional with JavaScript disabled: the browser toggles
+   `open` itself, the card tints, the chevron flips and the body opens. It is
+   also what renders correctly in the server/prerendered markup before
+   hydration, where item 1 is already open.
+   -------------------------------------------------------------------------- */
+
+.faq__item[open] {
+  border-color: rgba(var(--tint-rgb), .26);
+}
+
+.faq__item[open] .faq__body {
+  grid-template-rows: 1fr;
+}
+
+.faq__item[open] .faq__summary::after {
+  transform: rotate(-135deg);
+  margin-top: 4px;
+}
+
+/* --------------------------------------------------------------------------
+   OPEN STATE, PART 2 — the enhanced two-state model
+   Faq.jsx sets data-enhanced on the section root once it has mounted. From
+   then on `open` means only "laid out" and `.faq__item--open` means "visually
+   open", which is what allows the visual state to be dropped a frame BEFORE
+   the content leaves the layout — the whole trick behind a smooth collapse.
+
+   So: with JS running, an item that is [open] but NOT --open is mid-collapse,
+   and these rules put it back to the closed visuals while the content is still
+   in the layout and shrinking. When --open IS present the :not() fails, no rule
+   here matches, and the baseline above takes over unchanged.
+
+   One override per state rather than a full duplicate ladder, and each is
+   specific enough (0,6,x against 0,3,x) to win without !important.
+   -------------------------------------------------------------------------- */
+
+.faq[data-enhanced] .faq__item[open]:not(.faq__item--open) {
+  border-color: var(--line);
+}
+
+.faq[data-enhanced] .faq__item[open]:not(.faq__item--open) .faq__body {
+  grid-template-rows: 0fr;
+}
+
+.faq[data-enhanced] .faq__item[open]:not(.faq__item--open) .faq__summary::after {
+  transform: rotate(45deg);
+  margin-top: -4px;
+}
+
+/* --------------------------------------------------------------------------
+   SPLIT LINES
+   SplitText builds these: `linesClass: 'faq__line'` gives each line the first
+   class and each generated mask wrapper the same name plus `-mask`. SplitText
+   writes `overflow: clip` inline on the mask itself; the rules below are
+   belt-and-braces plus the padding/margin pair that stops a descender being
+   clipped on a subpixel boundary. Same shape as Hero.css.
+   -------------------------------------------------------------------------- */
+
+.faq__line {
+  display: block;
+}
+
+.faq__line-mask {
+  display: block;
+  overflow: hidden;
+  padding-bottom: .12em;
+  margin-bottom: -.12em;
+}
+
+/* --------------------------------------------------------------------------
+   WILL-CHANGE — motion-system §C.7
+   Never in a base rule. `.is-live` is added and removed by the section's own
+   ScrollTrigger onToggle, so these layers exist only while the section is
+   actually being scrubbed. Nine rows plus the heading lines promoted for the
+   whole page life, times twelve sections, is a mobile-Safari memory problem
+   long before it is a performance win.
+   -------------------------------------------------------------------------- */
+
+.faq__eyebrow,
+.faq__line,
+.faq__item {
+  will-change: auto;
+}
+
+.faq.is-live .faq__eyebrow,
+.faq.is-live .faq__line,
+.faq.is-live .faq__item {
+  will-change: transform, opacity;
+}
+
+/* --------------------------------------------------------------------------
+   TABLET — legacy 1505. Single column; the lede stacks above the list.
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 1080px) {
+  .faq__grid {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   MOBILE — legacy 1616, 1619-1620.
+   At <=760px both media blocks match: `grid-template-columns: 1fr` comes from
+   the 1080 block above and its 40px gap is overridden to 28px here.
+   `section.band { padding: 56px 0 }` and `:root { --pad: 20px }` both come from
+   components.css §11 and are not restated.
+
+   The summary keeps a comfortable touch target at these values: 16px + 16px of
+   padding around a 14px/1.65 line is ~49px, well clear of the 42px floor.
+   `.faq__answer` deliberately keeps its 14px desktop size — legacy has no
+   mobile override for it.
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 760px) {
+  .faq__grid {
+    gap: 28px;
+  }
+
+  .faq__item {
+    padding: 0 16px;
+  }
+
+  .faq__summary {
+    font-size: 14px;
+    padding: 16px 0;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   REDUCED MOTION — legacy 1477, section-local half
+   The CSS half of the reduced-motion accordion. Faq.jsx takes the matching
+   branch in its click handler (both states move in one update, no rAF, no
+   transitionend wait), and this makes sure the browser has no transition to
+   run even if that branch is ever bypassed.
+
+   The chevron's transform transition and the card's border-color transition
+   are NOT disabled here. That is legacy's behaviour, it is called out
+   explicitly in the section spec (§4.4) as intentional, and this is a faithful
+   port. Both are sub-300ms click responses on a two-state control, not scroll
+   motion; the scroll timeline is not created at all in this branch.
+
+   Note there is nothing to disable for the scroll gestures themselves — they
+   are GSAP tweens that the matchMedia reduced branch never builds, not CSS
+   transitions that need switching off.
+   -------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .faq__body {
+    transition: none;
+  }
+}

@@ -428,7 +428,9 @@ export default function Hero() {
   }, [chips])
 
   return (
-    <section className="hero" ref={rootRef} aria-labelledby="heroTitle">
+    // id="top" is load-bearing: the header brand and the footer both link to
+    // #top, and it is the canonical URL's fragment.
+    <section className="hero" id="top" ref={rootRef} aria-labelledby="heroTitle">
       <div className="hero__stage" ref={stageRef}>
         <div className="hero__field" ref={fieldRef} aria-hidden="true">
           {chips.map((c) => (

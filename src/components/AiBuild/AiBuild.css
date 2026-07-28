@@ -1,0 +1,899 @@
+/* ==========================================================================
+   AI BUILD — #ai-build   (§B.8, PIN-SCRUB, set-piece 3 of 3)
+   Layout and paint only. Every timing, distance, stagger, count and pin
+   length lives in aiBuild.motion.js.
+
+   Transcribed from legacy/index.html lines 1000–1184, plus the responsive
+   blocks at 1160 / 1166 / 1178–1183. Divergences are marked inline and there
+   are only four kinds:
+
+     PIN     — forced by the fact that this section holds the viewport. A
+               pinned frame the content does not fit is content nobody can
+               read, and unlike a normal band there is no scrolling out of it.
+     MOTION  — a property GSAP now owns. Legacy drove the sparkline, the feed
+               rows and the two pulses from CSS animations gated on a class an
+               IntersectionObserver added; §B.8 moves all of that onto the
+               scrubbed timeline. A CSS transition or keyframe on the same
+               channel a GSAP tween writes is the §0.1 flicker, and it is the
+               hardest bug in this build to trace back to its cause.
+     STATE   — legacy CSS holds the START state of an animated element
+               (`.mk-area { opacity: 0 }`). Here CSS holds the FINAL state and
+               GSAP's `fromTo` paints the start, so a prerendered page that
+               never hydrates shows finished content rather than an empty
+               panel (§C.8 #2 applied to the prerender, not just to
+               reduced motion).
+     SHARED  — the rule already exists in components.css and is not repeated.
+
+   Every selector is prefixed with `#ai-build`. Twelve sections land in one
+   cascade and the legacy class names (`.mock`, `.mk-num`, `.mf-tag`) are
+   generic enough to collide silently (§C.2). New elements this port
+   introduces are named `aib__*`; legacy class names are preserved because the
+   section spec calls them load-bearing.
+
+   NOT PORTED, deliberately:
+     .build-honest      (legacy 1037) — declared, but no markup in this
+                        section. Dead rule.
+     .reveal / .stagger (legacy 1426-1457) — the retired reveal system (§0.1).
+                        The initial state of everything animated here is set
+                        by gsap.set/fromTo inside the effect, never by CSS.
+     .mag               (legacy 1467) — the CTA uses Framer Motion PRESS
+                        instead, which also removes the one permanent
+                        `will-change` §C.7 names.
+     @keyframes draw    (legacy 1113) — replaced by the scrubbed
+                        stroke-dashoffset rail.
+     @keyframes feedIn  (legacy 1146) — replaced by the scrubbed feed stagger.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   PINNED STAGE
+   -------------------------------------------------------------------------- */
+
+/* PIN. `section.band` ships `padding: 116px 0` (components.css §1). On a
+   pinned section that padding has to live INSIDE the pinned element, or the
+   section box is 100vh + 232px, the pin spacer inherits the difference, and
+   the band's own air turns into dead scroll on both sides of the set-piece.
+   The border-top is left alone — it is the seam with #pricing. */
+section.band#ai-build {
+  padding: 0;
+}
+
+#ai-build .aib__stage {
+  /* One lever for the whole pinned frame's air. Tighten this first if the
+     stage does not fit a viewport; the compaction block below is the second
+     lever and the beat windows in aiBuild.motion.js are the third. */
+  --aib-stage-pad: clamp(20px, 3.5vh, 72px);
+
+  min-height: 100vh;
+  /* svh is the SMALL viewport — the height with a mobile URL bar expanded.
+     Sizing the pinned frame to the smallest case is what stops the closing
+     beat (the build strip, 0.90 → 1.00) landing under the fold while the bar
+     is showing. Dropped by engines without svh, which fall back to the line
+     above. */
+  min-height: 100svh;
+
+  display: grid;
+  /* `safe center` degrades to `start` when the content is taller than the
+     frame, so an overflow eats the BOTTOM rather than decapitating the
+     heading. The unprefixed value is the fallback for engines without it. */
+  align-content: center;
+  align-content: safe center;
+  padding: var(--aib-stage-pad) 0;
+}
+
+/* §D.1 mitigation 3: with `MOTION.pinMobile = false` the mobile breakpoint
+   runs the same timeline on the standard scrub window instead of holding the
+   viewport, and a stage that still claimed a full viewport would just be a
+   band with a lot of empty air in it. The attribute is written by the effect,
+   so the default (attribute absent) is the pinned sizing above. */
+#ai-build[data-pin='off'] .aib__stage {
+  min-height: 0;
+}
+
+/* PIN. The composition has five stacked blocks — head, cards, chip row, mock,
+   strip — and at legacy's spacing it measures ~1075px, which does not fit a
+   900px laptop viewport. These are the shavings, in one place, ordered by how
+   much they buy. Nothing here changes a colour, a weight or a radius: the
+   section still reads as the legacy design, more densely set. Raise any of
+   them back and check the frame against a 1440×900 window before shipping. */
+#ai-build .aib__stage .section-head {
+  margin-bottom: 28px;
+}
+#ai-build .aib__stage .build-card {
+  padding: 20px 22px 18px;
+}
+#ai-build .aib__stage .build-also {
+  margin-top: 14px;
+}
+#ai-build .aib__stage .mock {
+  margin-top: 18px;
+}
+#ai-build .aib__stage .build-strip {
+  margin-top: 14px;
+  padding: 20px 26px;
+}
+
+/* SHARED. components.css §10 still ships the legacy reveal system, and its
+   `.section-head h2 { clip-path: inset(0 0 106% 0) }` is UNCONDITIONAL — the
+   heading is clipped to nothing until a `.reveal.in` ancestor opens it. This
+   section is on the GSAP path and never gets that class, so without the
+   override the h2 would be invisible forever. The mask here is SplitText's,
+   which is a transform inside an overflow:hidden wrapper — no clip-path, no
+   CSS transition, nothing for the scrub to fight. */
+#ai-build .section-head h2 {
+  clip-path: none;
+  transition: none;
+}
+
+/* SplitText writes overflow:hidden inline on its mask wrappers; these are
+   belt-and-braces plus the padding that stops a descender being shaved by the
+   mask edge. Same pair as Hero.css's `.hero__line`. */
+#ai-build .aib__line {
+  display: block;
+}
+#ai-build .aib__line-mask {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.12em;
+  margin-bottom: -0.12em;
+}
+
+/* The hand-rolled masked line rise, used on the two single-line elements
+   where SplitText would rebuild a whole line box every refresh to produce one
+   line of output: the mock's delta line and the closing price. Same distance
+   and ease as the signature gesture — the wrapper is the only difference.
+   The padding/negative-margin pair gives the descenders somewhere to sit
+   without the mask clipping them at rest; the values are px rather than em
+   because `em` on the wrapper resolves against the INHERITED font size, not
+   against the child's. */
+#ai-build .aib__mask {
+  display: block;
+  overflow: hidden;
+}
+
+/* --------------------------------------------------------------------------
+   BUILD CARDS
+   legacy 1003-1017.
+   -------------------------------------------------------------------------- */
+
+#ai-build .build-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+
+#ai-build .build-card {
+  position: relative;
+  overflow: hidden;
+  padding: 28px 26px 26px;
+  border-radius: 20px;
+  border: 1px solid rgba(var(--iris-rgb), .22);
+  background: linear-gradient(180deg, rgba(var(--iris-rgb), .07), rgba(255, 255, 255, .62));
+  /* `transform` is deliberately NOT in this transition list. The card's
+     transform channel belongs to the scrubbed timeline; a 250ms CSS
+     transition on the same property would fight the scrub every frame the
+     pointer is over a card. The hover lift below moves to `translate`, which
+     is an independent channel in the CSS transform pipeline and composes with
+     GSAP's `transform` matrix instead of overwriting it. */
+  transition: border-color .25s ease, translate .25s var(--e-out);
+}
+#ai-build .build-card:hover {
+  border-color: rgba(var(--iris-rgb), .48);
+  translate: 0 -3px;
+}
+
+/* The 01/02/03 is a two-layer opacity cross-fade, muted → iris (§A.4 rule 2).
+   Both faces sit in the same grid cell so their type metrics are identical —
+   an absolutely-positioned twin drifts by a subpixel and the pair shimmers
+   through the cross-fade. The whole `.build-idx` is aria-hidden, so the
+   duplicate glyph costs nothing in the accessibility tree.
+   The resting colour is `--muted`, one step up the warm ramp from legacy's
+   `--muted-2`, matching the correction components.css §2 made to
+   `.mono-label`. It is decorative text so AA does not strictly apply, but
+   there is no reason for this section to sit on the failing end of the ramp
+   while the rest of the site sits on the passing one. */
+#ai-build .build-idx {
+  display: inline-grid;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .2em;
+  color: var(--muted);
+}
+#ai-build .aib__idx-face {
+  grid-area: 1 / 1;
+}
+/* STATE. Two stacked glyphs both at opacity 1 would double-print the number
+   in the window between first paint and hydration. Legacy renders this
+   number in iris, which is BOTH its static state and the timeline's end
+   state, so the accent face is the one CSS leaves visible and the muted face
+   starts hidden. GSAP's fromTo pair repaints both at build time, so
+   progress 0 still shows the muted one. */
+#ai-build .aib__idx-face--rest {
+  opacity: 0;
+}
+#ai-build .aib__idx-face--accent {
+  color: var(--iris-soft);
+  opacity: 1;
+}
+
+#ai-build .build-card h3 {
+  margin-top: 12px;
+  font-size: 19px;
+  letter-spacing: -.02em;
+}
+#ai-build .build-card p {
+  margin-top: 9px;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+/* --------------------------------------------------------------------------
+   "ALSO BUILT" CHIP ROW
+   legacy 1039-1049.
+
+   The CONTAINER is uppercase mono — that is what renders the "Also built: "
+   label — and each chip <span> undoes it back to body/sentence case. Do not
+   "simplify" this: hoisting `text-transform` would uppercase all six chips
+   (spec risk 23).
+   -------------------------------------------------------------------------- */
+
+#ai-build .build-also {
+  margin-top: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+
+#ai-build .build-also span {
+  padding: 6px 12px;
+  border-radius: 999px;
+  text-transform: none;
+  letter-spacing: .02em;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  color: var(--muted);
+  border: 1px solid rgba(var(--iris-rgb), .28);
+  background: rgba(var(--iris-rgb), .06);
+}
+
+/* In legacy the label is a bare text node and therefore matches none of the
+   chip rules above. It is an element here only so the timeline can stagger it
+   with the chips, so every chip declaration is reverted on it, one for one,
+   back to inheriting the container. Rendering is identical to the text node:
+   an anonymous flex item's leading/trailing whitespace collapses exactly the
+   same way this span's does. */
+#ai-build .build-also > .aib__also-label {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  text-transform: inherit;
+  letter-spacing: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+/* --------------------------------------------------------------------------
+   THE MOCK — "what a build actually looks like once it is running"
+   legacy 1051-1158.
+   The `--bg` / `--surface` / `--line` re-point that makes the inset rows stay
+   visible against white is SHARED (components.css §7, `.instrument, .serp,
+   .mock`) and is not repeated here.
+   -------------------------------------------------------------------------- */
+
+#ai-build .mock {
+  margin: 26px 0 0;
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid rgba(var(--iris-rgb), .3);
+  background:
+    linear-gradient(180deg, rgba(var(--iris-rgb), .07), rgba(var(--iris-rgb), 0) 60%),
+    #fffdf8;
+  box-shadow: 0 24px 60px rgba(var(--tint-rgb), .18);
+}
+
+#ai-build .mock-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 18px;
+  border-bottom: 1px solid rgba(var(--tint-rgb), .11);
+  background: rgba(var(--tint-rgb), .04);
+}
+#ai-build .mock-dots {
+  display: flex;
+  gap: 6px;
+}
+#ai-build .mock-dots i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: rgba(var(--tint-rgb), .16);
+}
+#ai-build .mock-title {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: .08em;
+  color: var(--muted);
+}
+#ai-build .mock-live {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--mint-soft);
+}
+
+/* `rgba(79,214,148,.6)` is a legacy literal that does NOT match the ported
+   `--mint-rgb` (44,149,100). Copied rather than tokenised: swapping it
+   visibly changes the glow (spec risk 21). */
+#ai-build .mock-live::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--mint);
+  box-shadow: 0 0 0 0 rgba(79, 214, 148, .6);
+}
+
+/* MOTION. Legacy runs both pulses permanently, for the whole life of the
+   page. §B.8 gates the `live` pill's pulse on `.is-live` — the class the
+   pinned trigger's onToggle writes — so it runs while the section holds the
+   viewport and at no other time. `.mk-pulse` goes with it: two always-on
+   animations under three pins is exactly the compositor budget §D.5 warns
+   about, and an animation nobody is looking at is pure cost.
+   This is also what turns them off under reduced motion, for free: that
+   branch never creates a trigger, so `.is-live` is never added. */
+#ai-build.is-live .mock-live::before {
+  animation: aib-pulse 2.4s ease-out infinite;
+}
+#ai-build.is-live .mk-pulse {
+  animation: aib-pulse 2s ease-out infinite;
+}
+
+/* Renamed from legacy's `@keyframes pulse`. Keyframe names are GLOBAL — they
+   do not respect the `#ai-build` scope every selector in this file carries —
+   and a bare `pulse` in a twelve-section cascade is a collision waiting to
+   happen. The declarations are legacy's, unchanged; both consumers ride the
+   same keyframe at different durations, and the ring fades to alpha 0 so its
+   hue never shows. */
+@keyframes aib-pulse {
+  70% {
+    box-shadow: 0 0 0 7px rgba(var(--mint-rgb), 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(var(--mint-rgb), 0);
+  }
+}
+
+#ai-build .mock-grid {
+  display: grid;
+  grid-template-columns: minmax(0, .82fr) minmax(0, 1.18fr);
+  gap: 0;
+  align-items: stretch;
+}
+
+#ai-build .mk-left {
+  padding: 24px;
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  border-right: 1px solid rgba(var(--tint-rgb), .1);
+  background: linear-gradient(180deg, rgba(var(--iris-rgb), .07), transparent 70%);
+}
+#ai-build .mk-label {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+#ai-build .mk-hero {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: 6px;
+}
+#ai-build .mk-hero b {
+  font-family: var(--font-display);
+  font-size: clamp(44px, 5vw, 60px);
+  font-weight: 700;
+  letter-spacing: -.035em;
+  line-height: 1;
+  color: var(--iris-soft);
+  /* tabular-nums is not cosmetic here: the counter rewrites this string on
+     every scrubbed frame, and proportional digits would make the whole
+     `11.4 hrs` block breathe sideways as it climbs. */
+  font-variant-numeric: tabular-nums;
+}
+#ai-build .mk-hero em {
+  font-style: normal;
+  font-size: 15px;
+  color: var(--muted-2);
+}
+
+/* legacy's `margin-top: 7px` moves onto the mask wrapper so the mask edge
+   sits tight to the type instead of 7px above it. */
+#ai-build .aib__mask--delta {
+  margin-top: 7px;
+  padding-bottom: 3px;
+  margin-bottom: -3px;
+}
+#ai-build .mk-delta {
+  /* `display: block` because the element is now inside the mask wrapper
+     rather than being a direct grid item of `.mk-left`; an inline box has no
+     transformable box for `yPercent` to move. */
+  display: block;
+  margin-top: 0;
+  font-size: 12px;
+  color: var(--mint-soft);
+}
+
+/* --------------------------------------------------------------------------
+   THE SPARKLINE
+   legacy 1102-1113. Sanctioned exception 1 (§A.5): there is no transform that
+   reveals a path along its own length.
+   -------------------------------------------------------------------------- */
+
+#ai-build .mk-spark {
+  width: 100%;
+  height: 58px;
+  margin-top: 16px;
+  overflow: visible;
+}
+
+/* §A.5's conditions, all present: one path in the section, `stroke-linecap:
+   round`, and a FIXED `stroke-dasharray` set once here and never re-measured
+   per frame. The path is ~296 user units long, so 300 clears it completely.
+   STATE. legacy pairs the dasharray with `stroke-dashoffset: 300` — the
+   START state — because a `.mock.in` class then animated it to 0. That class
+   is gone; the offset rests at its FINAL value and GSAP's fromTo supplies the
+   300 (aiBuild.motion.js `seq.spark.dashFrom`, which mirrors the 300 here). */
+#ai-build .mk-line {
+  fill: none;
+  stroke: var(--iris-soft);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 300;
+  stroke-dashoffset: 0;
+}
+
+/* STATE + MOTION. legacy: `opacity: 0` plus a `transition: opacity .9s ease
+   .5s` fired by `.mock.in`. Both are gone — the opacity channel now belongs
+   to the scrubbed timeline, and a CSS transition sharing it would fight every
+   frame (§0.1). The fill cross-fades on OPACITY and never on dashoffset,
+   which is the other half of the §A.5 rule. */
+#ai-build .mk-area {
+  opacity: 1;
+}
+
+/* STATE + MOTION, same as `.mk-area`. `transform-box: fill-box` is what makes
+   `scale` on an SVG circle grow from its own centre instead of from the
+   viewBox origin — without it the dot flies in from the top-left corner. */
+#ai-build .mk-dot {
+  fill: var(--iris-soft);
+  opacity: 1;
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+}
+
+/* --------------------------------------------------------------------------
+   STAT CHIPS
+   legacy 1115-1123.
+   -------------------------------------------------------------------------- */
+
+#ai-build .mk-chips {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 20px;
+}
+#ai-build .mk-chip {
+  padding: 13px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(var(--tint-rgb), .12);
+  background: rgba(var(--tint-rgb), .03);
+}
+#ai-build .mk-chip b {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -.02em;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+#ai-build .mk-chip em {
+  font-style: normal;
+  font-size: 12px;
+  color: var(--muted-2);
+  margin-left: 2px;
+}
+#ai-build .mk-chip span {
+  display: block;
+  margin-top: 5px;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--muted-2);
+}
+
+/* --------------------------------------------------------------------------
+   THE RIGHT PANEL — status line and feed
+   legacy 1125-1158.
+   -------------------------------------------------------------------------- */
+
+#ai-build .mk-right {
+  padding: 20px 22px;
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-width: 0;
+}
+
+#ai-build .mk-now {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 13px;
+  border-radius: 10px;
+  border: 1px solid rgba(var(--iris-rgb), .3);
+  background: rgba(var(--iris-rgb), .09);
+  font-size: 12.5px;
+  color: var(--iris-soft);
+}
+#ai-build .mk-pulse {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--iris);
+  box-shadow: 0 0 0 0 rgba(var(--iris-rgb), .65);
+}
+
+/* The four status variants are stacked layers cross-faded on opacity (§A.4
+   rule 2) rather than a `textContent` swap, because a text mutation cannot be
+   scrubbed backwards. One grid cell for all four keeps their type metrics
+   identical — the row's height is the tallest variant's and never changes as
+   the cross-fade runs, so nothing below it reflows mid-scrub. */
+#ai-build .aib__status {
+  display: grid;
+  min-width: 0;
+}
+#ai-build .aib__status-face {
+  grid-area: 1 / 1;
+  opacity: 0;
+}
+/* STATE. Four stacked sentences at opacity 1 would render as garble between
+   first paint and hydration. This is the one place in the file where CSS
+   holds the legacy STATIC state rather than the timeline's end state: legacy
+   ships `#mkNow` containing STATUS[0], and that is also what §B.8 requires
+   under reduced motion ("Status line shows variant 1 only"). The scrubbed
+   path overrides all four at build; only variant 3 is on screen at the end
+   of the pin. `.aib__status` contains nothing but faces, so :first-child is
+   unambiguous. */
+#ai-build .aib__status-face:first-child {
+  opacity: 1;
+}
+#ai-build .mk-now-txt {
+  min-width: 0;
+}
+
+#ai-build .mk-feed {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+
+/* MOTION. legacy: `animation: feedIn .55s var(--e-out) both`, fired
+   implicitly by each <li> being freshly inserted by the 4600ms ticker. The
+   ticker is deleted (§B.8) and so is the keyframe: these rows are authored
+   data revealed by a scrubbed stagger, and their opacity/transform belong to
+   that tween and to nothing else. */
+#ai-build .mk-feed li {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 13px;
+  align-items: center;
+  padding: 11px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  color: var(--muted);
+  min-width: 0;
+}
+
+/* Zebra striping. In legacy this INVERTED on every tick, because every row
+   shifted one position when a new one was prepended. With the ticker gone the
+   striping is finally stable — which is a side effect of deleting the
+   interval, not a change anybody has to make (spec risk 6). */
+#ai-build .mk-feed li:nth-child(odd) {
+  background: rgba(var(--tint-rgb), .035);
+}
+
+#ai-build .mf-t {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--muted-2);
+}
+#ai-build .mf-d {
+  min-width: 0;
+}
+#ai-build .mf-d b {
+  color: var(--ink);
+  font-weight: 600;
+}
+#ai-build .mf-tag {
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  font-weight: 600;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+  padding: 4px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+/* Two more legacy literals that disagree with the ported tokens
+   (`--mint-rgb` is 44,149,100 and `--amber-rgb` is 189,122,18). Copied, not
+   tokenised — these are the tag borders and swapping them changes the
+   rendered colour (spec risk 21). The TEXT colours are the tokens, and both
+   `--mint-soft` and `--amber-soft` clear AA on the mock's white ground. */
+#ai-build .mf-tag.done {
+  color: var(--mint-soft);
+  border: 1px solid rgba(79, 214, 148, .34);
+}
+#ai-build .mf-tag.wait {
+  color: var(--amber-soft);
+  border: 1px solid rgba(240, 169, 59, .36);
+}
+
+#ai-build .mock-cap {
+  padding: 14px 22px 18px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--muted-2);
+  border-top: 1px solid rgba(var(--tint-rgb), .09);
+}
+#ai-build .mock-cap strong {
+  color: var(--muted);
+}
+
+/* --------------------------------------------------------------------------
+   BOTTOM CTA STRIP
+   legacy 1019-1036.
+   -------------------------------------------------------------------------- */
+
+#ai-build .build-strip {
+  margin-top: 20px;
+  padding: 26px 30px;
+  border-radius: 20px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 32px;
+  align-items: center;
+  border: 1px solid rgba(var(--iris-rgb), .3);
+  background: linear-gradient(100deg, rgba(var(--iris-rgb), .1), rgba(var(--iris-rgb), .03));
+}
+#ai-build .bs-kicker {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--iris-soft);
+}
+#ai-build .build-strip p {
+  margin-top: 7px;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--muted);
+  max-width: 62ch;
+}
+#ai-build .build-strip p strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+#ai-build .bs-side {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+}
+
+/* The price rides yPercent out of its mask, so it needs a transformable box.
+   5px of mask padding clears the display face's descenders at rest. */
+#ai-build .aib__mask--price {
+  padding-bottom: 5px;
+  margin-bottom: -5px;
+}
+#ai-build .bs-price {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -.02em;
+  white-space: nowrap;
+}
+#ai-build .bs-price .from {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+
+/* --------------------------------------------------------------------------
+   WILL-CHANGE DISCIPLINE (§C.7)
+   Never in a base rule. `.is-live` is added and removed by the trigger's
+   onToggle, so these layers exist only while the section is actually being
+   scrubbed. Twelve sections holding ~10 promoted layers each would blow out
+   memory on mobile Safari long before it helped anything (§D.5 #3).
+
+   `.mk-line` is absent on purpose: `stroke-dashoffset` is not a compositable
+   property, so promoting the path buys nothing and costs a layer.
+   -------------------------------------------------------------------------- */
+
+#ai-build .build-card,
+#ai-build .build-also > span,
+#ai-build .mock,
+#ai-build .mk-feed li,
+#ai-build .aib__status-face,
+#ai-build .aib__idx-face,
+#ai-build .build-strip { will-change: auto; }
+
+#ai-build.is-live .build-card,
+#ai-build.is-live .build-also > span,
+#ai-build.is-live .mock,
+#ai-build.is-live .mk-feed li,
+#ai-build.is-live .aib__status-face,
+#ai-build.is-live .aib__idx-face,
+#ai-build.is-live .build-strip { will-change: transform, opacity; }
+
+/* --------------------------------------------------------------------------
+   RESPONSIVE
+   Three different stacking breakpoints — 1080 for the card grid, 900 for the
+   mock, 760 for the strip. That is not a bug and they must not be collapsed
+   into one number (spec risk 22). The 900px here lines up with the motion
+   system's `MEDIA.mobile` boundary only by coincidence; they answer different
+   questions (layout reflow vs. which storyboard runs) and are kept separate.
+   -------------------------------------------------------------------------- */
+
+/* legacy 1179 — the cards go single-column at TABLET, not at mobile. */
+@media (max-width: 1080px) {
+  #ai-build .build-grid {
+    grid-template-columns: 1fr;
+    max-width: 560px;
+    margin-inline: auto;
+  }
+}
+
+/* legacy 1160 — the mock stacks. */
+@media (max-width: 900px) {
+  #ai-build .mock-grid {
+    grid-template-columns: 1fr;
+  }
+  #ai-build .mk-left {
+    border-right: 0;
+    border-bottom: 1px solid rgba(var(--tint-rgb), .1);
+  }
+  #ai-build .mk-feed li {
+    grid-template-columns: auto 1fr;
+    row-gap: 6px;
+  }
+  #ai-build .mf-tag {
+    grid-column: 2;
+    justify-self: start;
+  }
+}
+
+/* FEED LENGTH — mirrors `MOTION.feed.rowsShown` in aiBuild.motion.js.
+   §B.8: "Feed shows 3 rows, not 5 — five rows at 390px pushes the strip off
+   the pinned frame." The breakpoint is the motion system's `MEDIA.mobile`
+   (899px), not the mock's 900px layout breakpoint, because this is a
+   storyboard decision rather than a reflow one — the timeline animates
+   exactly the rows this rule leaves visible.
+
+   Scoped to `no-preference` on purpose: the cut exists to fit a PINNED frame,
+   the reduced-motion branch has no pin, and §B.8 requires the feed to be
+   "fully rendered, all rows visible" there. If you change the count, change
+   `feed.rowsShown` with it. */
+@media (max-width: 899px) and (prefers-reduced-motion: no-preference) {
+  #ai-build .mk-feed li:nth-child(n + 4) {
+    display: none;
+  }
+}
+
+/* legacy 1178 + 1180-1183. */
+@media (max-width: 760px) {
+  #ai-build .mock-title {
+    font-size: 10px;
+  }
+  #ai-build .build-strip,
+  #ai-build .aib__stage .build-strip {
+    grid-template-columns: 1fr;
+    gap: 18px;
+    padding: 22px 20px;
+  }
+  #ai-build .bs-side {
+    justify-items: stretch;
+  }
+  #ai-build .bs-side .cta {
+    justify-content: center;
+  }
+}
+
+/* PIN, mobile. The stacked composition is much taller than the desktop one —
+   the mock's two panels sit one above the other and the cards are 1-across —
+   so the pinned frame needs a second round of shaving. See `concerns` in the
+   handoff: on a short phone this composition is still at risk of overflowing
+   100svh, and `MOTION.pinMobile = false` is the documented escape hatch
+   (§D.1 mitigation 3). */
+@media (max-width: 899px) {
+  #ai-build .aib__stage {
+    --aib-stage-pad: clamp(14px, 2.5vh, 40px);
+  }
+  #ai-build .aib__stage .mk-left {
+    padding: 16px 18px;
+  }
+  #ai-build .aib__stage .mk-right {
+    padding: 14px 16px;
+  }
+  #ai-build .aib__stage .mk-spark {
+    height: 44px;
+    margin-top: 10px;
+  }
+  #ai-build .aib__stage .mk-chips {
+    margin-top: 12px;
+  }
+  #ai-build .aib__stage .mk-feed li {
+    padding: 8px 10px;
+  }
+  #ai-build .aib__stage .mock-cap {
+    padding: 10px 16px 12px;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   REDUCED MOTION — section-local subset of legacy 1166-1171
+   Belt-and-braces. The effect's reduced branch already gsap.set()s every one
+   of these to its final state, and inline styles beat any rule here; both
+   pulses are additionally unreachable because that branch creates no trigger
+   and therefore never adds `.is-live`. This block is what covers the window
+   between first paint and hydration, and the case where the effect never runs
+   at all.
+   -------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  #ai-build .mk-line {
+    stroke-dashoffset: 0;
+  }
+  #ai-build .mk-area,
+  #ai-build .mk-dot {
+    opacity: 1;
+  }
+  #ai-build .mock-live::before,
+  #ai-build .mk-pulse,
+  #ai-build.is-live .mock-live::before,
+  #ai-build.is-live .mk-pulse {
+    animation: none;
+  }
+  #ai-build .build-card {
+    transition: none;
+  }
+}

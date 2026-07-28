@@ -1,0 +1,108 @@
+/* ==========================================================================
+   SITE FOOTER
+   Layout only. Every timing / distance / stagger lives in contact.motion.js
+   (FOOTER_MOTION) — the footer is a two-file component and shares its
+   neighbour's motion config rather than growing a third file.
+
+   Transcribed from legacy/index.html <style> lines 1418–1424, plus the mobile
+   override at 1629.
+
+   `.shell` comes from src/styles/components.css and is not re-declared here.
+   `.site-footer` is also one of the scopes in components.css's heading-metrics
+   rule, so the class name is kept exactly.
+   ========================================================================== */
+
+.site-footer {
+  border-top: 1px solid var(--line);
+  padding: 26px 0;
+}
+
+.footer-grid {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  font-size: 12.5px;
+  /* DIVERGENCE — CONTRAST. Legacy ships `color: var(--muted-2)` (#948a7b),
+     which is 3.01:1 on the bone ground at 12.5px — a WCAG AA failure for body
+     text, and this is real copy (the copyright line and the outcomes
+     disclaimer), not decoration. --muted (#6a6053) is the next step down the
+     same warm-neutral ramp at 5.46:1. Identical substitution, and identical
+     reasoning, to the one components.css already made for .mono-label. */
+  color: var(--muted);
+}
+
+/* The mask each group rises out of. It wraps rather than replaces the legacy
+   <div>s, so .footer-grid's flex children are still exactly three. */
+.footer__mask {
+  overflow: hidden;
+}
+
+.footer-links {
+  display: flex;
+  gap: 22px;
+}
+
+.footer-links a {
+  text-decoration: none;
+  color: var(--muted); /* DIVERGENCE — see .footer-grid */
+  transition: color .18s ease;
+  display: inline-flex;
+  align-items: center;
+  /* Touch-target floor. Do not lower it. 42px, not 40 — these are standalone
+     navigation links, not inline prose links, so the 42px floor applies. */
+  min-height: 42px;
+}
+
+.footer-links a:hover {
+  color: var(--ink);
+}
+
+/* DIVERGENCE — FOCUS RING. The mask clips at the padding edge, which would eat
+   the global focus ring (2px outline at 3px offset, base.css) on these links.
+   Drawing it INSIDE the link's own box keeps it fully visible without
+   weakening it and without widening the mask, which would let the
+   pre-animation text peek out. Same treatment as .email-inline a in
+   Contact.css, for the same reason. */
+.footer-links a:focus-visible {
+  outline-offset: -3px;
+}
+
+/* --------------------------------------------------------------------------
+   WILL-CHANGE DISCIPLINE (§C.7)
+   `.is-live` is added and removed by the footer trigger's onToggle, so these
+   three layers exist only while the short scrub window is actually running.
+   -------------------------------------------------------------------------- */
+
+.site-footer .footer__group {
+  will-change: auto;
+}
+
+.site-footer.is-live .footer__group {
+  will-change: transform;
+}
+
+/* --------------------------------------------------------------------------
+   RESPONSIVE — legacy 1629
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 760px) {
+  .footer-grid {
+    flex-direction: column;
+    text-align: center;
+    gap: 10px;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   REDUCED MOTION
+   The JS branch builds no timeline and no trigger and gsap.set()s each group
+   to y: 0. This is the belt-and-braces half: if the effect never runs at all
+   (script error, GSAP blocked), the masks must not be able to hide anything.
+   -------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .footer__mask {
+    overflow: visible;
+  }
+}

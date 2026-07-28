@@ -1,0 +1,520 @@
+/* ==========================================================================
+   SITE SHELL — skip link, scroll hairline, fixed header, brand, nav, toggle.
+   Layout only. Every timing/distance number lives in siteHeader.motion.js.
+
+   Ported from legacy/index.html: §4.2 (298-306), §4.3 (309-367),
+   §4.6 (1459-1465), §4.8 (1507), §4.9 (1514-1540), §4.7 (1470-1486).
+
+   NOT ported, on purpose — these belong to files this component must not
+   duplicate (components.css "do not re-declare anything in this file"):
+     .shell + the --pad breakpoints  → components.css §1
+     .sr-only                        → base.css
+     :focus-visible                  → base.css (amber/3px/6px is the
+                                       established React convention; legacy's
+                                       mint ring is NOT re-declared here)
+     .cta / .secondary-cta           → components.css §4
+     .mag                            → components.css §6, and unused: the
+                                       header CTA is a Framer Motion element
+     html { scroll-behavior: smooth } → dead under Lenis (base.css forces
+                                       scroll-behavior: auto). See §5.4.
+     main { padding-top: 76px }      → deliberately NOT added. See the
+                                       --nav-h note below and integrationNotes.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   --nav-h  — the header height, declared once
+   -------------------------------------------------------------------------- */
+
+/**
+ * Legacy repeats the header height as three unrelated literals: `.nav
+ * { height: 76px }`, `.nav-links { top: 68px }` (a hand-mirrored copy of the
+ * mobile `.nav` height) and `main { padding-top: 76px }`. Changing one and not
+ * the others is a silent 8px misalignment, and §4.9 flags it.
+ *
+ * --nav-h is the single source of truth. --nav-gap is the breathing room legacy
+ * baked into `scroll-padding-top`, so --nav-h + --nav-gap reproduces its two
+ * values exactly: 76 + 16 = 92px, and 68 + 12 = 80px at ≤760px.
+ *
+ * siteHeader.motion.js carries the same two numbers ONLY as a fallback for a
+ * first paint where this stylesheet has not applied; the anchor handler reads
+ * these properties live, so CSS and JS cannot disagree.
+ *
+ * `main { padding-top: var(--nav-h) }` is deliberately NOT declared. §5.5:
+ * pushing <main> down by the header height means the hero starts 76px down the
+ * page, its pin engages 76px late, and the bottom 76px of a 100vh stage sits
+ * below the fold for the entire pin. Option (a) — the transparent header floats
+ * over the top of the page — is the one taken here.
+ */
+:root {
+  --nav-h: 76px;
+  --nav-gap: 16px;
+}
+
+@media (max-width: 760px) {
+  :root {
+    --nav-h: 68px;
+    --nav-gap: 12px;
+  }
+}
+
+/**
+ * Anchor landing offset for every path Lenis does NOT own.
+ *
+ * Legacy relied on `html { scroll-padding-top: 92px }`. Lenis ignores
+ * scroll-padding entirely (§5.4, §D.4), so the offset for a smooth nav click is
+ * applied in `lenis.scrollTo(target, { offset })`. This rule covers the rest:
+ * reduced motion (Lenis is never constructed), a cold load on a #hash, and the
+ * browser's native jump when a target has not been ported yet.
+ *
+ * The list is explicit rather than `[id]` so it cannot silently re-offset some
+ * unrelated element a section builder gives an id to. These eleven are the
+ * complete set of anchor targets the shell, the hero CTAs, the footer and
+ * sitemap.xml point at (§B "Every section's id is load-bearing").
+ */
+#main,
+#top,
+#diagnosis,
+#coverage,
+#ai-visibility,
+#method,
+#pricing,
+#ai-build,
+#why,
+#faq,
+#contact {
+  scroll-margin-top: calc(var(--nav-h) + var(--nav-gap));
+}
+
+/* --------------------------------------------------------------------------
+   Skip link — legacy 298-306, verbatim
+   -------------------------------------------------------------------------- */
+
+/* :focus, not :focus-visible — keyboard AND programmatic focus both reveal it.
+   §4.7 confirms the reduced-motion block does not touch this transition; that
+   is shipping behaviour and it is left alone. */
+.skip-link {
+  position: fixed;
+  left: 18px;
+  top: 12px;
+  z-index: 300;
+  transform: translateY(-160%);
+  background: var(--ink);
+  color: var(--bg);
+  padding: 10px 14px;
+  border-radius: 10px;
+  text-decoration: none;
+  font-weight: 700;
+  transition: transform .2s ease;
+}
+.skip-link:focus { transform: translateY(0); }
+
+/* --------------------------------------------------------------------------
+   Scroll progress hairline — legacy 1459-1465, verbatim
+   -------------------------------------------------------------------------- */
+
+/* transform-origin: 0 50% is load-bearing: §A.7 specifies the scaleX rail grows
+   from the left edge. The initial scaleX(0) is the tween's progress-0 state —
+   GSAP's fromTo re-establishes it, but declaring it here means the bar is never
+   painted full-width for a frame before the effect runs. */
+#progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 2px;
+  width: 100%;
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  background: linear-gradient(90deg, var(--amber), var(--mint));
+  z-index: 400;
+  pointer-events: none;
+}
+
+/* --------------------------------------------------------------------------
+   Header — legacy 309-311, reworked for the plate cross-fade
+   -------------------------------------------------------------------------- */
+
+/**
+ * `position: fixed`, NOT sticky — despite the "sticky header" framing. §4.3.
+ *
+ * Legacy's `transition: background .22s ease, border-color .22s ease` and its
+ * `.is-scrolled { background: …; border-bottom-color: … }` are GONE. Colour
+ * changes are opacity cross-fades between stacked layers (§A.4 rule 2), so the
+ * header itself is now transparent chrome and the two plates below own the
+ * scrolled state. GSAP tweens the solid plate's opacity; nothing tweens a
+ * colour.
+ *
+ * Consequence worth knowing: legacy's box was 76px + a 1px transparent border
+ * = 77px. The border now lives INSIDE the plates (which are `inset: 0` under
+ * `box-sizing: border-box`), so the header box is exactly --nav-h and the
+ * hairline still paints on its bottom edge.
+ */
+.site-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+}
+
+.site-header__plate {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  /* Both plates carry the same box and the same border so the cross-fade has
+     nothing to shimmer against — the chrome equivalent of the hero's rule that
+     stacked faces must share identical type metrics. */
+  border-bottom: 1px solid transparent;
+}
+
+/* The unscrolled state: literally nothing. It exists as a named layer so the
+   cross-fade pattern is visible in the markup and so a future wash over the
+   hero has a home that does not require re-plumbing the timeline. */
+.site-header__plate--clear {
+  opacity: 1;
+}
+
+/* rgba(245,241,232,.82) is --bg (#f5f1e8) at 82%, hard-coded in legacy rather
+   than tokenised. Kept as the literal so the header reads identically to the
+   shipping page. Only the opacity of this element is ever animated. */
+.site-header__plate--solid {
+  opacity: 0;
+  background: rgba(245, 241, 232, .82);
+  border-bottom-color: var(--line);
+  /* PREFIX FIRST, STANDARD LAST. The minifier collapses these two into one
+     declaration and keeps whichever came last; with the standard property
+     first, the build shipped ONLY -webkit-backdrop-filter, which Chromium does
+     not support (CSS.supports('-webkit-backdrop-filter') === false). The header
+     lost its blur in the dominant browser and page text read straight through
+     the 82%-alpha plate. */
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  backdrop-filter: blur(18px) saturate(1.4);
+}
+
+.nav {
+  height: var(--nav-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+/* --------------------------------------------------------------------------
+   Brand — legacy 313-330, verbatim
+   -------------------------------------------------------------------------- */
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  text-decoration: none;
+  flex-shrink: 0;
+  /* The logo is a real navigation control (it links to #top), so it takes the
+     42px tap-target floor. The mark itself only measures 31px tall. */
+  min-height: 42px;
+}
+
+/* Two skewed bars — an amber one and a taller mint one. Drawn entirely in CSS;
+   the span itself is empty and aria-hidden. */
+.brand-symbol {
+  position: relative;
+  width: 40px;
+  height: 38px;
+  flex: 0 0 40px;
+}
+.brand-symbol::before,
+.brand-symbol::after {
+  content: "";
+  position: absolute;
+  border-radius: 3px 3px 1px 1px;
+  transform: skewX(-24deg);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .24);
+  transition: transform .4s var(--e-out);
+}
+.brand-symbol::before {
+  left: 6px;
+  bottom: 3px;
+  width: 11px;
+  height: 26px;
+  background: linear-gradient(180deg, #f7ca7d 0%, #f0a93b 48%, #c77f1d 100%);
+}
+.brand-symbol::after {
+  left: 23px;
+  bottom: 4px;
+  width: 11px;
+  height: 36px;
+  background: linear-gradient(180deg, #96e9c0 0%, #4fd694 46%, #22a568 100%);
+}
+/* The two bars lift by different amounts, so the mark reads as two objects at
+   two depths rather than one shape sliding. §4.7 confirms reduced motion does
+   not disable this; that is shipping behaviour and it is left alone. */
+.brand:hover .brand-symbol::before { transform: skewX(-24deg) translateY(-2px); }
+.brand:hover .brand-symbol::after  { transform: skewX(-24deg) translateY(-4px); }
+
+.brand-divider {
+  width: 1px;
+  height: 38px;
+  background: linear-gradient(180deg, transparent, rgba(var(--tint-rgb), .42), transparent);
+}
+
+.brand-wordmark {
+  display: grid;
+  gap: 3px;
+  line-height: 1;
+  transform: translateY(1px);
+}
+
+.brand-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: .22em;
+  font-size: 18px;
+  color: var(--ink);
+  text-transform: uppercase;
+}
+
+/* Painted with a gradient through background-clip: text. */
+.brand-subtitle {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  letter-spacing: .4em;
+  font-size: 8.5px;
+  text-transform: uppercase;
+  background: linear-gradient(90deg, var(--amber), var(--mint));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* --------------------------------------------------------------------------
+   Nav links and actions — legacy 332-343, verbatim
+   -------------------------------------------------------------------------- */
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 26px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.nav-links a {
+  color: var(--muted);
+  text-decoration: none;
+  transition: color .18s ease;
+}
+.nav-links a:hover { color: var(--ink); }
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.nav-price {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted-2);
+  letter-spacing: .08em;
+}
+
+/* --------------------------------------------------------------------------
+   Mobile toggle — legacy 345-367, verbatim
+   -------------------------------------------------------------------------- */
+
+/* 44 × 44 clears the 42px touch floor. display:none until ≤760px. */
+.mobile-toggle {
+  display: none;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .8);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+/* The ±6px / ±45deg geometry assumes exactly these box metrics — 2px tall bars
+   with 4px vertical margins. Do not change the span box without redoing both. */
+.mobile-toggle span {
+  display: block;
+  width: 16px;
+  height: 2px;
+  border-radius: 99px;
+  background: currentColor;
+  margin: 4px auto;
+  transition: transform .3s var(--e-out), opacity .2s ease;
+}
+.mobile-toggle.is-open span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+.mobile-toggle.is-open span:nth-child(2) { opacity: 0; }
+.mobile-toggle.is-open span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
+
+/* --------------------------------------------------------------------------
+   will-change discipline — §C.7
+   Never in a base rule. `.is-live` is added and removed by the chrome
+   trigger's onToggle, i.e. it is present exactly while the header is past the
+   scroll threshold — which is precisely the window in which either channel can
+   move. Below the threshold nothing animates and nothing is promoted.
+   -------------------------------------------------------------------------- */
+
+.site-header.is-live { will-change: transform; }
+.site-header.is-live .site-header__plate--solid { will-change: opacity; }
+#progress.is-live { will-change: transform; }
+
+/* --------------------------------------------------------------------------
+   Scroll lock while the mobile panel is open
+   Scoped to ≤760px so it can never introduce a desktop scrollbar-width layout
+   shift; above that breakpoint the toggle is display:none and the panel can
+   never be open anyway. `.lenis.lenis-stopped { overflow: hidden }` in base.css
+   covers the Lenis path; this covers reduced motion, where Lenis does not
+   exist.
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 760px) {
+  html.is-nav-locked,
+  html.is-nav-locked body { overflow: hidden; }
+}
+
+/* --------------------------------------------------------------------------
+   Tablet — legacy 1507
+   Between 761px and 1080px: full nav row, CTA, no price note, no hamburger.
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 1080px) {
+  .nav-price { display: none; }
+}
+
+/* --------------------------------------------------------------------------
+   Mobile — legacy 1514-1540, shell subset
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 760px) {
+  .brand-symbol { width: 32px; height: 31px; flex-basis: 32px; }
+  .brand-symbol::before { left: 5px; bottom: 2px; width: 9px; height: 21px; }
+  .brand-symbol::after  { left: 18px; bottom: 3px; width: 9px; height: 29px; }
+  .brand-divider { height: 31px; }
+  .brand-name { font-size: 13.5px; letter-spacing: .2em; }
+  .brand-subtitle { font-size: 7.5px; letter-spacing: .34em; }
+
+  .mobile-toggle { display: block; }
+
+  /**
+   * THE PANEL.
+   *
+   * Two legacy bugs are fixed here, both flagged in §5.6 / §4.9. Everything
+   * else is verbatim.
+   *
+   * FIX 1 — FOCUSABLE WHILE INVISIBLE.
+   * Legacy closes the panel with `opacity: 0; pointer-events: none`. Neither
+   * removes the six links from the tab order, so a keyboard user tabs from the
+   * brand into an invisible menu. `visibility: hidden` does remove them.
+   * `visibility` is added to the transition list with a 0s duration and a delay
+   * equal to the slide, so it flips at the END of the close and therefore does
+   * not truncate the fade. SiteHeader.jsx also sets `inert` on the closed panel
+   * at this breakpoint, which additionally takes it out of the accessibility
+   * tree.
+   *
+   * FIX 2 — CONTRAST.
+   * Legacy's `background: rgba(10,11,15,.96)` is a leftover from the pre-paper
+   * dark theme. `.nav-links a` inherits `color: var(--muted)` (#6a6053), which
+   * on near-black measures roughly 1.9:1 — a WCAG failure by a factor of two
+   * and unreadable in practice. --surface-strong (rgba(255,253,248,.96)) is the
+   * minimal fix §4.9 names: it keeps the existing --muted link colour (now
+   * ~5.4:1, AA pass), matches the paper theme, and makes the panel's own
+   * `1px solid var(--line)` rules visible for the first time. No other
+   * declaration is touched.
+   *
+   * z-index: LEGACY USED 99, AND THAT NUMBER NO LONGER MEANS WHAT IT MEANT.
+   * Legacy's panel was a sibling of the header in the root stacking context,
+   * so 99-under-100 let the header's background cover the panel's overhang as
+   * it slid down. In React the panel is a DESCENDANT of the header, and the
+   * header's `position: fixed; z-index: 100` makes it a stacking context — so
+   * every descendant paints inside it and 99-vs-100 buys nothing. `-1` puts the
+   * panel in the negative-z layer, which paints BELOW the two absolutely
+   * positioned plates (z-index: auto) and below the in-flow nav row. Same
+   * result, correct mechanism. It cannot leak behind the page: the whole header
+   * stacking context sits at 100.
+   *
+   * `top: var(--nav-h)`: the header carries a GSAP transform (the direction
+   * hide), which makes it the containing block for this fixed child. Since the
+   * header's box is top:0/left:0/right:0 and exactly --nav-h tall, the panel
+   * resolves to the same rectangle either way — §D.11's transformed-ancestor
+   * hazard is checked and benign here.
+   */
+  .nav-links {
+    position: fixed;
+    top: var(--nav-h);
+    left: 0;
+    right: 0;
+    z-index: -1;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    background: var(--surface-strong);
+    /* Prefix first, standard last — see .site-header__plate--solid. */
+    -webkit-backdrop-filter: blur(18px);
+    backdrop-filter: blur(18px);
+    border-bottom: 1px solid var(--line);
+    padding: 8px 20px 16px;
+    /* Transform and opacity only. --panel-* are written from MOTION as inline
+       custom properties on the <nav>; the fallbacks keep the panel usable if
+       the component ever renders without them. */
+    transform: translateY(var(--panel-y, -6%));
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
+    transition:
+      transform var(--panel-slide, .3s) var(--e-out),
+      opacity var(--panel-fade, .2s) ease,
+      visibility 0s linear var(--panel-slide, .3s);
+  }
+
+  .nav-links.is-open {
+    transform: none;
+    opacity: 1;
+    pointer-events: auto;
+    visibility: visible;
+    transition:
+      transform var(--panel-slide, .3s) var(--e-out),
+      opacity var(--panel-fade, .2s) ease,
+      visibility 0s linear 0s;
+  }
+
+  /* 14px + 15px type ≈ a 47px row: over the 42px touch floor without needing a
+     min-height. The border relies on the anchors being direct children of the
+     <nav> — see the markup note in SiteHeader.jsx. */
+  .nav-links a {
+    padding: 14px 4px;
+    font-size: 15px;
+    border-bottom: 1px solid var(--line);
+  }
+  .nav-links a:last-child { border-bottom: 0; }
+
+  /* Compact nav pill. Specificity (0,2,0) so it beats components.css §11's
+     `.cta { min-height: 48px }` at this breakpoint. 44px still clears the 42px
+     floor components.css sets as the hard minimum. */
+  .nav-actions .cta {
+    min-height: 44px;
+    padding: 11px 16px;
+    font-size: 12.5px;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Reduced motion — §4.7 + §B.1
+   Must come after the ≤760px block: `.nav-links { transition: none }` and the
+   panel's own transition are both (0,1,0), so source order decides.
+
+   Deliberately NOT included, because §4.7 confirms legacy leaves them running
+   and that is the shipping behaviour: the brand hover lift, the hamburger bar
+   transitions, the skip-link slide, the nav-link colour transition.
+   -------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  /* Legacy 1475. The JS still runs in legacy; here the trigger is never even
+     created (SiteHeader.jsx's isReduced branch), and the element is hidden as
+     well so a stray scaleX can never paint. */
+  #progress { display: none; }
+
+  /* §B.1: "menu toggles with no transition". visibility therefore flips
+     instantly too, which is what we want — the panel appears and disappears. */
+  .nav-links { transition: none; }
+}

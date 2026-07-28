@@ -1,0 +1,539 @@
+/* ==========================================================================
+   CONTACT  (#contact)
+   Layout only. Every timing / distance / stagger lives in contact.motion.js.
+
+   Transcribed from legacy/index.html <style> lines 1335–1416 (contact block),
+   1505 and 1616–1627 (responsive), with three deliberate deviations, each
+   marked DIVERGENCE below.
+
+   SCOPING. Every rule is prefixed with the section block `.contact`, including
+   the rules whose legacy class names are kept (`.field`, `.num`, `.check`,
+   `.opt`). Those names are far too generic to sit unscoped in a stylesheet
+   twelve sections cascade into — `.field` alone would be a silent collision
+   waiting to happen — and §C.2's requirement is that a section's selectors
+   cannot reach another section's elements. Descendant-scoping delivers that
+   without renaming markup the port spec pins down class by class.
+
+   Nothing here re-declares a shared rule. `.shell`, `section.band`,
+   `.mono-label`, `h2 .ital`, `a { color: inherit }` and
+   `button, input, textarea, select { font: inherit }` all come from
+   src/styles/components.css and are composed with, never copied.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   0. RETIRING THE LEGACY REVEAL WIPE
+
+   components.css §10 still carries the old IntersectionObserver reveal system,
+   and one of its rules is section-specific to us:
+
+       .section-head h2, .contact-copy h2 { clip-path: inset(0 0 106% 0); }
+       .reveal.in h2                      { clip-path: inset(0 0 -20% 0); }
+
+   That heading is only ever un-clipped by `.reveal.in`, and `.reveal` is
+   retired (§0.1) — this section does not carry it. Left alone, the <h2> would
+   be clipped to nothing forever. It also has to go on its own merits: the
+   replacement for that wipe is the SplitText masked line rise (§A.6), and a
+   clip-path on the <h2> would clip the per-line masks that gesture depends on.
+
+   Specificity (0,2,1) so this wins regardless of stylesheet order.
+   -------------------------------------------------------------------------- */
+
+.contact .contact-copy h2 {
+  clip-path: none;
+  transition: none;
+}
+
+/* --------------------------------------------------------------------------
+   1. GRID  (legacy 1335–1337)
+   -------------------------------------------------------------------------- */
+
+.contact .contact-grid {
+  display: grid;
+  grid-template-columns: .9fr 1.1fr;
+  gap: 56px;
+  align-items: start;
+}
+
+.contact .contact-copy {
+  display: grid;
+  gap: 18px;
+}
+
+.contact .contact-copy h2 {
+  font-size: clamp(27px, 3.2vw, 42px);
+}
+
+/* Direct child: the lede only. The paragraph inside .form-card-head is a
+   different subtree and keeps its own smaller type. */
+.contact .contact-copy > p {
+  font-size: 15.5px;
+  color: var(--muted);
+}
+
+/* --------------------------------------------------------------------------
+   2. NEXT STEPS  (legacy 1339–1348)
+   -------------------------------------------------------------------------- */
+
+/* `margin: 0` is explicit rather than inherited. Legacy got it from a global
+   `* { margin: 0 }` that the port replaced with components.css's
+   `:where(ul, ol, …) { margin: 0 }` — that covers it today, but this list is
+   the one element in the section that would visibly jump (UA `margin-block:
+   1em`) if that rule ever moved, so it states its own value. */
+.contact .next-steps {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+  display: grid;
+  gap: 16px;
+}
+
+.contact .next-steps li {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+/* The numeral. `position: relative` and a transparent border are the only
+   additions to legacy's rule: the circle is now a two-layer stack so the
+   "lit" state can be an opacity cross-fade rather than a colour tween
+   (§A.4 rule 2), and the border it used to own moved onto the two faces. */
+.contact .next-steps .num {
+  position: relative;
+  flex: 0 0 26px;
+  height: 26px;
+  border-radius: 50%;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1;
+}
+
+/* Both faces are geometrically and typographically identical — same box, same
+   font, same optical centring. If they are not, the cross-fade shimmers. */
+.contact .contact__num-face {
+  position: absolute;
+  inset: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid transparent;
+  font: inherit;
+}
+
+/* Legacy's resting appearance, unchanged: hairline ring, mint numeral. */
+.contact .contact__num-face--outline {
+  border-color: var(--line-strong);
+  color: var(--mint-soft);
+}
+
+/* The lit state. Starts at 0 and is cross-faded up by the timeline; under
+   reduced motion gsap.set() puts it straight to 1. */
+.contact .contact__num-face--lit {
+  opacity: 0;
+  border-color: rgba(var(--mint-rgb), .5);
+  background: rgba(var(--mint-rgb), .14);
+  color: var(--mint-soft);
+}
+
+/* The mask each step's copy rises out of. Nothing focusable lives inside it,
+   so a plain `overflow: hidden` is safe here — see §4 for the case where it
+   is not. `min-width: 0` keeps the flex item from refusing to wrap. */
+.contact .contact__step-mask {
+  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* legacy `.next-steps span:last-child`, applied to the element it was always
+   describing. */
+.contact .contact__step-copy {
+  display: block;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.contact .next-steps strong {
+  color: var(--ink);
+}
+
+/* --------------------------------------------------------------------------
+   3. EMAIL INLINE  (legacy 1349–1350)
+   -------------------------------------------------------------------------- */
+
+.contact .email-inline {
+  /* DIVERGENCE 1 of 3 — CONTRAST. Legacy ships `color: var(--muted-2)`
+     (#948a7b), which measures 3.01:1 on the bone ground. This is 13.5px body
+     copy carrying a real instruction ("Prefer email?"), so the WCAG AA
+     threshold is 4.5:1 and the large-text exemption does not apply. --muted
+     (#6a6053) is the next step down the same warm-neutral ramp at 5.46:1.
+     This is the identical substitution components.css already made for
+     .mono-label, with the identical reasoning; the same swap is applied to
+     .field .opt, .form-card-head p and .form-fineprint below. */
+  color: var(--muted);
+  font-size: 13.5px;
+  margin-top: 6px;
+  /* The mask the line rises out of. */
+  overflow: hidden;
+}
+
+.contact .contact__email-inner {
+  display: block;
+}
+
+.contact .email-inline a {
+  color: var(--mint-soft);
+}
+
+/* DIVERGENCE 2 of 3 — FOCUS RING. The mask above clips at the padding edge,
+   which would eat the global focus ring (2px outline at 3px offset, base.css)
+   on the mail link inside it. Drawing the ring INSIDE the link's own box keeps
+   it fully visible without weakening it and without widening the mask, which
+   would let the pre-animation text peek out of the top. Same treatment on the
+   footer links, for the same reason. */
+.contact .email-inline a:focus-visible {
+  outline-offset: -3px;
+}
+
+/* --------------------------------------------------------------------------
+   4. FORM CARD  (legacy 1352–1364)
+   -------------------------------------------------------------------------- */
+
+.contact .form-card {
+  border: 1px solid rgba(var(--tint-rgb), .16);
+  border-radius: 22px;
+  background: var(--surface-strong);
+  box-shadow: 0 24px 60px rgba(var(--tint-rgb), .18);
+  overflow: hidden;
+}
+
+.contact .form-card-head {
+  padding: 26px 30px 0;
+  display: grid;
+  gap: 5px;
+}
+
+.contact .form-card-head h3 {
+  font-size: 21px;
+}
+
+.contact .form-card-head p {
+  font-size: 13px;
+  color: var(--muted); /* DIVERGENCE 1 — see .email-inline */
+}
+
+/* --------------------------------------------------------------------------
+   5. FIELDS  (legacy 1366–1381)
+   -------------------------------------------------------------------------- */
+
+.contact .lead-form {
+  display: grid;
+  gap: 16px;
+  padding: 22px 30px 30px;
+}
+
+.contact .field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+/* `.field` is the LABEL's typography carrier — the <label> itself has no rule
+   of its own and inherits from here. */
+.contact .field {
+  display: grid;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.contact .field .opt {
+  color: var(--muted); /* DIVERGENCE 1 — see .email-inline */
+  font-weight: 500;
+}
+
+.contact .field input,
+.contact .field select,
+.contact .field textarea {
+  width: 100%;
+  background: #fff;
+  border: 1px solid rgba(var(--tint-rgb), .2);
+  border-radius: 10px;
+  padding: 12px 14px;
+  color: var(--ink);
+  font-size: 14px;
+  font-family: var(--font-body);
+  /* Micro-interaction, not motion. §4.5 keeps these two channels alive under
+     prefers-reduced-motion on purpose — they are affordance, not decoration. */
+  transition: border-color .18s ease, box-shadow .18s ease;
+}
+
+.contact .field textarea {
+  resize: vertical;
+  min-height: 84px;
+}
+
+/* Mint border plus a 3px mint glow, with the global outline suppressed. That
+   makes the glow the ONLY focus affordance for form controls, so it must not
+   be softened. */
+.contact .field input:focus,
+.contact .field select:focus,
+.contact .field textarea:focus {
+  outline: none;
+  border-color: rgba(var(--mint-rgb), .8);
+  box-shadow: 0 0 0 3px rgba(var(--mint-rgb), .18);
+}
+
+.contact .field input::placeholder,
+.contact .field textarea::placeholder {
+  /* Legacy value, kept. It is low-contrast and every field also has a real
+     visible <label>, so the placeholder is supplementary rather than the only
+     label — raising it far enough to clear 4.5:1 would make placeholder text
+     indistinguishable from an entered value, which is a design decision for
+     the owner and not a silent restyle. Flagged, not changed. */
+  color: rgba(var(--tint-rgb), .38);
+}
+
+/* Matches the literal string "true" only, so the explicit aria-invalid="false"
+   React emits after a first failed submit is visually inert — exactly as in
+   legacy. The red is the --red token's channels written literally, as legacy
+   wrote them. */
+.contact .field [aria-invalid="true"] {
+  border-color: rgba(184, 56, 43, .6);
+  box-shadow: 0 0 0 3px rgba(184, 56, 43, .12);
+}
+
+.contact .field-error {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--red);
+  min-height: 0;
+}
+
+/* Off-screen rather than display:none, so autofill-style bots still see it.
+   The wrapper is aria-hidden and the input is tabindex="-1", so no keyboard or
+   screen-reader user can reach it. */
+.contact .hidden-field {
+  position: absolute;
+  left: -9999px;
+  opacity: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+/* --------------------------------------------------------------------------
+   6. SUBMIT + BANNER  (legacy 1383–1404)
+   -------------------------------------------------------------------------- */
+
+.contact .form-submit {
+  /* position/overflow are scaffolding for a ::after sweep this button does not
+     have — that is the .cta treatment, and .form-submit is not a .cta. Legacy
+     ships them; harmless, kept. */
+  position: relative;
+  overflow: hidden;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 14.5px;
+  font-weight: 700;
+  padding: 15px 22px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, .2);
+  box-shadow: 0 10px 26px rgba(var(--tint-rgb), .16);
+  cursor: pointer;
+  transition: transform .18s var(--e-out), box-shadow .18s ease;
+}
+
+/* Not magnetic (no `.mag`), and no Framer Motion press physics: this is the
+   one button on the page whose lift is pure CSS, and §4.5 deliberately leaves
+   it running under reduced motion. */
+.contact .form-submit:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 36px rgba(var(--tint-rgb), .24);
+}
+
+.contact .form-submit.is-busy {
+  opacity: .72;
+  cursor: progress;
+  transform: none;
+}
+
+.contact .form-submit:disabled {
+  pointer-events: none;
+}
+
+.contact .form-fineprint {
+  font-size: 12px;
+  color: var(--muted); /* DIVERGENCE 1 — see .email-inline */
+  text-align: center;
+}
+
+/* `display: none` until `.show`, so an empty banner does not occupy a row of
+   the form's grid. #8c2b20 is a one-off darker red for banner text; the border
+   and fill are the --red channels written literally, as legacy wrote them. */
+.contact .form-error-banner {
+  display: none;
+  font-size: 13px;
+  line-height: 1.55;
+  color: #8c2b20;
+  border: 1px solid rgba(184, 56, 43, .4);
+  background: rgba(184, 56, 43, .07);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.contact .form-error-banner.show {
+  display: block;
+}
+
+/* --------------------------------------------------------------------------
+   7. SUCCESS PANEL  (legacy 1406–1416)
+   Both mechanisms are kept: the panel is conditionally rendered AND `.is-sent`
+   is set on the card, so nothing depends on which one wins.
+   -------------------------------------------------------------------------- */
+
+.contact .form-success {
+  display: none;
+  gap: 12px;
+  justify-items: center;
+  text-align: center;
+  padding: 56px 40px 60px;
+}
+
+.contact .form-card.is-sent .lead-form,
+.contact .form-card.is-sent .form-card-head {
+  display: none;
+}
+
+.contact .form-card.is-sent .form-success {
+  display: grid;
+}
+
+.contact .form-success .check {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 2px solid var(--mint);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--mint);
+  font-size: 24px;
+}
+
+.contact .form-success h3 {
+  font-size: 22px;
+}
+
+.contact .form-success p {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--muted);
+  max-width: 340px;
+}
+
+/* --------------------------------------------------------------------------
+   8. WILL-CHANGE DISCIPLINE  (§C.7)
+   Never in a base rule. `.is-live` is added and removed by the section
+   trigger's onToggle, so these layers exist only while the scrub is running.
+   -------------------------------------------------------------------------- */
+
+.contact .contact__eyebrow,
+.contact .contact__lede,
+.contact .contact__line,
+.contact .contact__num-face--lit,
+.contact .contact__step-copy,
+.contact .contact__email-inner,
+.contact .form-card {
+  will-change: auto;
+}
+
+.contact.is-live .contact__eyebrow,
+.contact.is-live .contact__lede,
+.contact.is-live .contact__line,
+.contact.is-live .contact__num-face--lit,
+.contact.is-live .contact__step-copy,
+.contact.is-live .contact__email-inner,
+.contact.is-live .form-card {
+  will-change: transform, opacity;
+}
+
+/* --------------------------------------------------------------------------
+   9. RESPONSIVE
+   Legacy puts .contact-grid in shared selectors alongside .why-grid and
+   .faq-grid (1505, 1616). Those two sections own their own halves; only the
+   .contact-grid half is written here, so nothing is declared twice.
+   -------------------------------------------------------------------------- */
+
+/* legacy 1505 — single column: the copy stacks above the form card. */
+@media (max-width: 1080px) {
+  .contact .contact-grid {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+}
+
+/* legacy 1616, 1622–1627 */
+@media (max-width: 760px) {
+  .contact .contact-grid {
+    gap: 28px;
+  }
+
+  .contact .form-card {
+    border-radius: 18px;
+  }
+
+  .contact .form-card-head {
+    padding: 24px 20px 0;
+  }
+
+  .contact .lead-form {
+    padding: 18px 20px 24px;
+    gap: 14px;
+  }
+
+  /* The paired fields stack. */
+  .contact .field-row {
+    grid-template-columns: 1fr;
+  }
+
+  /* 15px is the iOS auto-zoom compromise the rest of the page uses — Safari
+     zooms the viewport on focus below 16px, and 15px keeps the page's scale
+     while staying close to it. Do not lower it. */
+  .contact .field input,
+  .contact .field select,
+  .contact .field textarea {
+    padding: 13px 14px;
+    font-size: 15px;
+  }
+
+  /* Touch-target floor. */
+  .contact .form-submit {
+    min-height: 52px;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   10. REDUCED MOTION
+
+   There is deliberately almost nothing here. Every animated element in this
+   section starts at its FINAL state in CSS and is moved to its start state by
+   GSAP, so the reduced-motion branch in Contact.jsx — which builds no timeline
+   and no ScrollTrigger at all — leaves a fully composed, fully readable
+   section behind. There is no CSS start state to neutralise.
+
+   The two `.18s` transitions that remain (field focus, submit hover) are left
+   running on purpose: §4.5 classifies them as micro-interaction affordance
+   rather than motion, and legacy's reduced-motion block does not disable them
+   either.
+   -------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  /* Belt and braces: if the JS branch never runs (script error, GSAP blocked),
+     the masks must not be able to hide anything. */
+  .contact .contact__step-mask,
+  .contact .email-inline {
+    overflow: visible;
+  }
+}

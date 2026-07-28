@@ -1,4 +1,7 @@
 @import './tokens.css';
+/* Shared component layer. Imported here so every section gets it for free;
+   section stylesheets are imported by their components and land after it. */
+@import './components.css';
 
 *, *::before, *::after { box-sizing: border-box; }
 

@@ -1,0 +1,464 @@
+/* ==========================================================================
+   COMPONENTS — the shared layer.
+   Everything here is used by two or more sections, or is a named primitive
+   whose modifier rules were scattered across the legacy file.
+
+   Transcribed from legacy/index.html <style> (lines 126–1631).
+   Imported by base.css, immediately after tokens.css, so every section picks
+   it up without importing it individually. Section stylesheets are imported
+   by their components and therefore always land after this file.
+
+   RULES OF ENGAGEMENT FOR SECTION BUILDERS
+   1. Do not re-declare anything in this file. Compose with it.
+   2. Nothing here animates top/left/width/height. Keep it that way.
+   3. Touch targets are >= 42px. Do not lower one.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   0. BASE GAP-FILL
+   Legacy got these from `* { margin: 0 }` (line 136) and two element rules
+   (267–268) that did not make it into base.css.
+   -------------------------------------------------------------------------- */
+
+a { color: inherit; }
+button, input, textarea, select { font: inherit; }
+
+/* base.css resets p / h1-h3 only. Legacy zeroed everything, and .cov-list,
+   .feature-list, .inst-rows and .next-steps all depend on that. :where() keeps
+   specificity at 0 so any section rule wins without !important. */
+:where(ul, ol, dl, figure, blockquote, fieldset) { margin: 0; }
+
+/* base.css:30-36 drops legacy's `line-height: 1.1` (line 275). Without it every
+   heading inherits body's 1.65 and a 54px h2 renders at ~89px leading. Scoped
+   away from the Hero, which owns its own metrics in Hero.css.
+
+   The scope uses :is(), not :where(). This file is imported *from* base.css
+   and therefore resolves BEFORE base.css's own `h1, h2, h3` rule, so a
+   zero-specificity version would lose font-weight and letter-spacing to
+   base.css on source order. :is() puts this at (0,1,1) — it wins regardless
+   of order, and still ties-then-loses to any later class rule such as
+   `.section-head h2 { letter-spacing: -.035em }` below. That is intended. */
+:is(.band, .marquee, .site-header, .site-footer, .instrument, .serp, .mock)
+  :is(h1, h2, h3) {
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+/* --------------------------------------------------------------------------
+   1. LAYOUT PRIMITIVES
+   -------------------------------------------------------------------------- */
+
+/* legacy 279. Eleven consumers. */
+.shell {
+  width: min(var(--max), calc(100% - 2 * var(--pad)));
+  margin-inline: auto;
+}
+
+/* legacy 280-281. Not in tokens.css — without these .shell keeps 72px gutters
+   on a 390px phone. */
+@media (max-width: 1240px) { :root { --pad: 40px; } }
+@media (max-width: 760px)  { :root { --pad: 20px; } }
+
+/* legacy 398-399. Nine consumers; four are tinted.
+   `section.band` keeps the element qualifier so the specificity matches legacy
+   and the per-section overrides written against it still land. */
+section.band {
+  padding: 116px 0;
+  border-top: 1px solid var(--line);
+}
+section.band.tinted {
+  background: linear-gradient(180deg, var(--bg-2), transparent 70%);
+}
+
+/* legacy 401-404. Six consumers. */
+.section-head {
+  display: grid;
+  grid-template-columns: 1.05fr .95fr;
+  gap: 56px;
+  align-items: end;
+  margin-bottom: 64px;
+}
+.section-head h2 {
+  font-size: clamp(31px, 4vw, 54px);
+  letter-spacing: -.035em;
+}
+.section-head > p {
+  font-size: 16px;
+  color: var(--muted);
+  max-width: 46ch;
+  justify-self: end;
+}
+
+/* legacy declares this twice with identical values — `.section-head .lede`
+   (402) and `.faq-grid .lede` (1310). Collapsed. Seven consumers. */
+.lede {
+  display: grid;
+  gap: 14px;
+}
+
+/* legacy 405-408. The `.why-copy h2 .ital` half of the selector was redundant —
+   `h2 .ital` already matched it. Eight consumers. */
+h2 .ital {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: 0;
+  font-size: 1.06em;
+}
+
+/* --------------------------------------------------------------------------
+   2. TYPOGRAPHY HELPERS
+   .sr-only lives in base.css:46 — do not re-declare it here or per section.
+   -------------------------------------------------------------------------- */
+
+/* legacy 283-290. Nine consumers. Sections may re-colour it:
+   `#ai-visibility .mono-label { color: var(--iris-soft) }` (legacy 682).
+
+   CONTRAST FIX, not a transcription. Legacy shipped `color: var(--muted-2)`
+   (#948a7b). On the warm-paper ground that is 3.01:1 against --bg and 2.70:1
+   against a .tinted band, at 11px/600 — a WCAG AA failure (4.5:1 required;
+   the large-text exemption needs 18.66px bold or 24px). This is not decorative
+   chrome: the label carries shipping copy in all ten places it is used
+   ("Coverage — what you buy", "The third surface — included, not sold").
+   --muted (#6a6053) is the next step down the same warm-neutral ramp and
+   measures 5.46:1 on --bg / 4.89:1 on --bg-2. A section that needs it lighter
+   must not go back past --muted. */
+.mono-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* legacy 579 (`.inst-foot .tick`). One consumer today; a one-declaration
+   primitive worth having by name. --mint on the mock surface is 3.67:1, but
+   the only consumer is `<span class="tick" aria-hidden="true">✓</span>`
+   (legacy markup 1769) — decorative, with the meaning carried by the sibling
+   text, so the AA text threshold does not apply. Left at legacy's value.
+   If a section ever renders a .tick that is NOT aria-hidden, use --mint-soft
+   (6.33:1) there. */
+.tick { color: var(--mint); }
+
+/* --------------------------------------------------------------------------
+   3. ACCENT CONTRACT
+   #pricing (legacy 815-817) and #ai-build (1002) both publish --acc / --acc-soft
+   / --acc-rgb, and shared components read them: .spot::after falls back to the
+   ink tint, and section-local rules (.feature-list li::before, .compare td.y,
+   .ct-p, .fs-badge, .compare-lead em) consume them. Declared here so the
+   contract is visible in one place instead of being discovered twice.
+   -------------------------------------------------------------------------- */
+
+[data-accent="amber"] { --acc: var(--amber); --acc-soft: var(--amber-soft); --acc-rgb: var(--amber-rgb); }
+[data-accent="mint"]  { --acc: var(--mint);  --acc-soft: var(--mint-soft);  --acc-rgb: var(--mint-rgb);  }
+[data-accent="blue"]  { --acc: var(--blue);  --acc-soft: var(--blue-soft);  --acc-rgb: var(--blue-rgb);  }
+[data-accent="iris"]  { --acc: var(--iris);  --acc-soft: var(--iris-soft);  --acc-rgb: var(--iris-rgb);  }
+
+/* --------------------------------------------------------------------------
+   4. BUTTONS
+   legacy 370-394. Consumers: header, hero, pricing (×5), ai-build.
+   Single owner — the duplicate block that lived in Hero.css has been removed.
+
+   DIVERGENCE FROM LEGACY, ON PURPOSE: no `transform` in the transition list and
+   no `:hover { transform: translateY(-1px) }`. Hero.css established that press
+   physics come from Framer Motion; two owners of one transform channel is a
+   fight nobody wins. Restore the lift on the element:
+
+       <motion.a className="cta" whileHover={{ y: -1 }} whileTap={{ scale: 0.98 }}
+                 transition={{ type: 'spring', stiffness: 400, damping: 30 }} />
+   -------------------------------------------------------------------------- */
+
+.cta,
+.secondary-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 46px;          /* touch floor is 42 — this clears it */
+  padding: 13px 22px;
+  border-radius: 999px;
+  text-decoration: none;
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: -.01em;
+  white-space: nowrap;
+  cursor: pointer;
+  border: 0;
+  transition: box-shadow .18s ease, border-color .18s ease, background .18s ease;
+}
+
+.cta {
+  position: relative;
+  overflow: hidden;
+  background: var(--ink);
+  color: var(--bg);
+  border: 1px solid rgba(255, 255, 255, .2);
+  box-shadow: 0 10px 26px rgba(var(--tint-rgb), .16);
+}
+
+/* Uiverse-style shine sweep, dialed down. legacy 383-390.
+   RECONCILED: legacy swept `rgba(10,11,15,.16)` — a *dark* sheen, which only
+   read as a shine back when the button was light on a dark page. On the warm
+   paper build the button is var(--ink), so the sweep is inverted to light.
+   left/width are static geometry set once; the only animated channel is
+   transform. Opt out per section with `.hero .cta::after { display: none }`. */
+.cta::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -60%;
+  width: 40%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .16), transparent);
+  transform: skewX(-18deg) translateX(-120%);
+  transition: transform .55s ease;
+  pointer-events: none;
+}
+
+.cta:hover { box-shadow: 0 16px 36px rgba(var(--tint-rgb), .24); }
+.cta:hover::after { transform: skewX(-18deg) translateX(420%); }
+
+.secondary-cta {
+  color: var(--ink);
+  background: rgba(255, 255, 255, .85);
+  border: 1px solid var(--line-strong);
+}
+.secondary-cta:hover {
+  border-color: rgba(var(--tint-rgb), .38);
+  background: #fff;
+}
+
+/* --------------------------------------------------------------------------
+   5. CURSOR SPOTLIGHT
+   legacy 873-879. Consumers: .cov-panel (×2), .offer (×3).
+   --mx / --my are written by a pointermove handler (legacy 2935-2944). In React
+   this is a `useSpotlight()` hook writing the two custom properties on the host
+   ref — not state, so it never re-renders. Gate it on
+   `matchMedia('(pointer: fine)')` and `!prefers-reduced-motion`, as legacy does.
+   -------------------------------------------------------------------------- */
+
+/* legacy relied on .cov-panel / .offer already being position:relative.
+   Asserting it here means .spot works on any host. */
+.spot { position: relative; }
+
+.spot::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    260px circle at var(--mx, 50%) var(--my, 50%),
+    rgba(var(--acc-rgb, var(--tint-rgb)), .07),
+    transparent 65%
+  );
+  opacity: 0;
+  transition: opacity .3s ease;
+  pointer-events: none;
+}
+.spot:hover::after { opacity: 1; }
+
+/* --------------------------------------------------------------------------
+   6. MAGNETIC BUTTONS
+   legacy 1467-1468. Consumers: header, hero, pricing (×2), ai-build.
+   The class is only a will-change hint; the pull comes from JS writing
+   `transform` (legacy 2609-2627). In React: a `useMagnetic()` hook that writes
+   el.style.transform inside a rAF loop, or Framer Motion useMotionValue + a
+   spring on x/y. If you use Framer Motion, drop `.mag` — FM sets will-change.
+   -------------------------------------------------------------------------- */
+
+.mag { will-change: transform; }
+
+/* --------------------------------------------------------------------------
+   7. MOCK SURFACES
+   legacy 195-207. Consumers: .instrument, .serp, .mock — three sections.
+   These re-point four tokens locally so the inset rows inside a white product
+   mock stay visible against white. They contrast with the bone page by being
+   *lighter* plus a crisp border, the way a real light-mode screenshot does.
+   -------------------------------------------------------------------------- */
+
+.instrument, .serp, .mock {
+  --bg: #fffdf8;
+  --surface: rgba(47, 40, 30, .035);
+  --line: rgba(47, 40, 30, .10);
+  --line-strong: rgba(47, 40, 30, .2);
+  color: var(--ink);
+  background-color: #fffdf8;
+}
+
+/* --------------------------------------------------------------------------
+   8. PILLS
+   legacy 1296-1302 (#why) plus 782 (declared in the AI-visibility region).
+   One consumer today; consolidated here because the modifiers were 500 lines
+   apart and a #why builder would have shipped two unstyled pills.
+   RECONCILED: p-ai's iris values now use --iris-rgb rather than the dark-theme
+   literal 154,140,255.
+   -------------------------------------------------------------------------- */
+
+.pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.pill {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+  border: 1px solid var(--line-strong);
+  padding: 6px 12px;
+  border-radius: 999px;
+}
+.pill.p-paid { color: var(--amber-soft); border-color: rgba(var(--amber-rgb), .35); }
+.pill.p-org  { color: var(--mint-soft);  border-color: rgba(var(--mint-rgb), .35); }
+.pill.p-ai   { color: var(--iris-soft);  border-color: rgba(var(--iris-rgb), .35); }
+
+/* --------------------------------------------------------------------------
+   9. CARD BASE — NEW, OPT-IN
+   Legacy has no `.card`. It has seven near-identical recipes under seven names.
+   The shared core is: 1px --line border, --surface fill, a radius in the 14-22
+   range. Compose:  <article className="card why-card">
+
+   Per-section deltas you still write locally (legacy values, unchanged):
+     .cov-panel  radius 20  padding 30px 28px  + position:relative;overflow:hidden
+     .offer      radius 20  padding 32px 28px  border rgba(--tint-rgb,.15)
+                            + box-shadow 0 6px 20px rgba(--tint-rgb,.05)
+     .step       radius 18  padding 28px 26px
+     .why-card   radius 18  padding 24px 28px          (mobile 20px)
+     .ai-card    radius 16  padding 22px               + hover border iris .32
+     .faq        radius 14  padding 0 22px             (mobile 0 16px)
+     .form-card  radius 22  background --surface-strong
+                            + box-shadow 0 24px 60px rgba(--tint-rgb,.18)
+     .build-card radius 20  iris gradient — does NOT use .card
+   Adopting .card must not change a single rendered value. If it would, skip it.
+   -------------------------------------------------------------------------- */
+
+.card {
+  border: 1px solid var(--line);
+  border-radius: var(--card-radius, 18px);
+  background: var(--surface);
+}
+
+/* --------------------------------------------------------------------------
+   10. SCROLL REVEALS
+   legacy 1426-1457. Nine consumers.
+
+   OPTIONAL. Prefer Framer Motion `whileInView` — the equivalent variants are
+   given below. Keep this CSS only for sections that stay on the
+   IntersectionObserver path. If every section goes to Framer Motion, delete
+   §10 and §12's reveal rules wholesale.
+
+     const reveal = {
+       hidden:  { opacity: 0, y: 18, filter: 'blur(6px)' },
+       visible: { opacity: 1, y: 0,  filter: 'blur(0px)',
+                  transition: { duration: .8, ease: [.16, 1, .3, 1] } },
+     }
+     const stagger = {
+       hidden:  {},
+       visible: { transition: { staggerChildren: .09, delayChildren: .04 } },
+     }
+     const staggerChild = {
+       hidden:  { opacity: 0, y: 20, filter: 'blur(5px)' },
+       visible: { opacity: 1, y: 0,  filter: 'blur(0px)',
+                  transition: { duration: .75, ease: [.16, 1, .3, 1] } },
+     }
+     <motion.div variants={reveal} initial="hidden" whileInView="visible"
+                 viewport={{ once: true, amount: 0.15 }} />
+
+   The .15 amount matches legacy's IntersectionObserver threshold (line 2509),
+   and `once: true` matches its `io.unobserve` (2506).
+   -------------------------------------------------------------------------- */
+
+.reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  filter: blur(6px);
+  transition:
+    opacity .8s var(--e-out),
+    transform .8s var(--e-out),
+    filter .8s var(--e-out);
+  transition-delay: var(--rd, 0s);
+}
+.reveal.in { opacity: 1; transform: none; filter: none; }
+
+/* Headings wipe up out of a mask instead of just fading — the one motion that
+   makes the page feel authored rather than templated. clip-path is composited;
+   this is not a layout animation. `.contact-copy h2` is #contact-owned but the
+   rule has always lived with the reveal system. */
+.section-head h2,
+.contact-copy h2 {
+  clip-path: inset(0 0 106% 0);
+  transition: clip-path 1.05s var(--e-out) .06s;
+}
+.reveal.in h2 { clip-path: inset(0 0 -20% 0); }
+
+/* Staggered children. The container stops animating itself and becomes a
+   passthrough so the two effects never muddy each other. */
+.reveal.stagger { opacity: 1; transform: none; filter: none; transition: none; }
+.reveal.stagger > * {
+  opacity: 0;
+  transform: translateY(20px);
+  filter: blur(5px);
+  transition:
+    opacity .75s var(--e-out),
+    transform .75s var(--e-out),
+    filter .75s var(--e-out);
+}
+.reveal.stagger.in > * { opacity: 1; transform: none; filter: none; }
+.reveal.stagger.in > *:nth-child(1) { transition-delay: .04s; }
+.reveal.stagger.in > *:nth-child(2) { transition-delay: .13s; }
+.reveal.stagger.in > *:nth-child(3) { transition-delay: .22s; }
+.reveal.stagger.in > *:nth-child(4) { transition-delay: .31s; }
+.reveal.stagger.in > *:nth-child(5) { transition-delay: .40s; }
+.reveal.stagger.in > *:nth-child(6) { transition-delay: .49s; }
+/* the FAQ runs longer than six — keep the tail behind the head */
+.reveal.stagger.in > *:nth-child(n+7) { transition-delay: .56s; }
+
+/* --------------------------------------------------------------------------
+   11. RESPONSIVE — shared overrides only
+   Legacy breakpoint ladder: 1240 / 1080 / 900 / 760. Hero.css adds 899.
+   -------------------------------------------------------------------------- */
+
+/* legacy 1491-1508, shared subset */
+@media (max-width: 1080px) {
+  .section-head { grid-template-columns: 1fr; gap: 16px; }
+  .section-head > p { justify-self: start; }
+}
+
+/* legacy 1513-1630, shared subset */
+@media (max-width: 760px) {
+  /* `html body`, not `body`. This file is imported *from* base.css, so it
+     resolves before base.css's own `body { font-size: 16px }` — at matching
+     (0,0,1) specificity the later unconditional rule would win and this step
+     would never apply. The extra element qualifier makes it (0,0,2) and
+     order-independent. Same reason as the :is() scope in §0. */
+  html body { font-size: 15px; }
+
+  section.band { padding: 56px 0; }
+  .section-head { margin-bottom: 28px; gap: 12px; }
+
+  /* Touch floor. Legacy used 52px for the hero pair (1549) and 44px for the
+     compact nav pill (1540); the ported Hero settled on 48. 48 is the shared
+     value — every one of those clears 42. A section that genuinely needs the
+     compact nav size overrides locally, never below 42. */
+  .cta, .secondary-cta { min-height: 48px; }
+}
+
+/* --------------------------------------------------------------------------
+   12. REDUCED MOTION — shared subset of legacy 1470-1486
+   The section-local entries stay with their sections.
+   -------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .cta, .secondary-cta { transition: none; }
+  .cta::after { display: none; }
+  .spot::after { display: none; }
+  .mag { transform: none !important; }
+
+  .reveal { opacity: 1; transform: none; filter: none; transition: none; }
+  .section-head h2,
+  .contact-copy h2 { clip-path: none; transition: none; }
+  .reveal.stagger > * { opacity: 1; transform: none; filter: none; transition: none; }
+}

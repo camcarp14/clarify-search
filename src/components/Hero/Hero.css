@@ -283,41 +283,10 @@
   pointer-events: auto;
 }
 
-/* CTA styling ported from legacy/index.html. Press physics come from Framer
-   Motion on the element itself, so no :active transform here. */
-.cta,
-.secondary-cta {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 46px;
-  padding: 13px 22px;
-  border-radius: 999px;
-  text-decoration: none;
-  font-size: 13.5px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  white-space: nowrap;
-  cursor: pointer;
-  border: 0;
-  transition: box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease;
-}
-
-.cta {
-  background: var(--ink);
-  color: var(--bg);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 10px 26px rgba(var(--tint-rgb), 0.16);
-}
-.cta:hover { box-shadow: 0 16px 36px rgba(var(--tint-rgb), 0.24); }
-
-.secondary-cta {
-  color: var(--ink);
-  background: rgba(255, 255, 255, 0.85);
-  border: 1px solid var(--line-strong);
-}
-.secondary-cta:hover { border-color: rgba(var(--tint-rgb), 0.38); background: #fff; }
+/* Base .cta / .secondary-cta styling now lives in src/styles/components.css —
+   the header, pricing and contact sections need the same buttons, and this
+   file loads after components.css, so a copy here would silently win the
+   cascade for the hero alone. Only hero-scoped overrides belong below. */
 
 /* --------------------------------------------------------------------------
    Mobile
@@ -366,7 +335,4 @@
   .hero[data-motion='reduced'] .hero__stage {
     min-height: 640px;
   }
-
-  .cta,
-  .secondary-cta { transition: none; }
 }

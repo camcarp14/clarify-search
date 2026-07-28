@@ -11,8 +11,12 @@
  * The query-string form is the one you want while tuning — it survives hot
  * reload and does not need the dev server restarted.
  */
+// `import.meta.env` only exists inside Vite's pipeline. Optional-chained so
+// this module can also be imported by plain Node — the build-time prerender
+// step renders the app outside the dev/build define pass, and an unguarded
+// read throws there, taking every module that imports DEBUG down with it.
 export const DEBUG =
-  import.meta.env.VITE_MOTION_DEBUG === 'true' ||
+  import.meta.env?.VITE_MOTION_DEBUG === 'true' ||
   (typeof window !== 'undefined' &&
     new URLSearchParams(window.location.search).has('motion-debug'))
 

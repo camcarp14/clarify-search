@@ -343,10 +343,13 @@
   .hero__resolve { gap: 14px; }
   .hero__copy { font-size: 16px; }
 
-  /* Full-width tap targets, comfortably over the 42px floor. */
+  /* Full-width tap targets, comfortably over the 42px floor.
+     SCOPED to .hero__actions on purpose: an unscoped `.cta { width: 100% }`
+     here leaks out and blows the header nav row apart on mobile, because the
+     header's own CTA rule never sets width and so cannot win the cascade. */
   .hero__actions { width: 100%; flex-direction: column; align-items: stretch; }
-  .cta,
-  .secondary-cta { width: 100%; min-height: 48px; }
+  .hero__actions .cta,
+  .hero__actions .secondary-cta { width: 100%; min-height: 48px; }
 }
 
 /* --------------------------------------------------------------------------

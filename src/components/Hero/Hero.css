@@ -1,0 +1,369 @@
+/* ==========================================================================
+   HERO
+   Layout only. Every timing/distance number lives in hero.motion.js.
+   ========================================================================== */
+
+/* Registered so GSAP can interpolate the drift amplitude smoothly. Without
+   the @property registration the custom property is a plain string and would
+   jump 1 → 0 instead of easing. Chrome 85+, Safari 16.4+, Firefox 128+. */
+@property --drift-amp {
+  syntax: '<number>';
+  initial-value: 1;
+  inherits: true;
+}
+
+.hero {
+  position: relative;
+}
+
+.hero__stage {
+  position: relative;
+  height: 100vh;
+  min-height: 600px;
+  /* Contains the scattered chips so nothing off-screen can create a
+     horizontal scrollbar. `clip` does not create a containing block, so it
+     cannot break ScrollTrigger's fixed-position pinning the way a transform
+     or filter on an ancestor would. */
+  overflow: clip;
+}
+
+/* --------------------------------------------------------------------------
+   Chip field
+   -------------------------------------------------------------------------- */
+
+.hero__field {
+  position: absolute;
+  inset: 0;
+  --drift-amp: 1;
+  z-index: 1;
+}
+
+/* left/top are written once by JS at layout time and never animated.
+   The timeline only ever touches transform / opacity / filter. */
+.hero__slot {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+/* will-change is applied only while the pin is actually active — promoting
+   40 layers for the whole page life costs memory for nothing. The .is-live
+   class is toggled by the ScrollTrigger onToggle. */
+.hero__field.is-live .hero__slot {
+  will-change: transform, opacity, filter;
+}
+
+/* Separate wrapper so the idle drift never fights the scrubbed transform
+   written on .hero__slot. Two elements, two transform channels. */
+.hero__drift {
+  animation: chipDrift var(--drift-dur, 8s) ease-in-out infinite alternate;
+  animation-delay: var(--drift-delay, 0s);
+}
+
+@keyframes chipDrift {
+  from {
+    transform: translate3d(
+        calc(var(--drift-amp) * var(--dx1, 0px)),
+        calc(var(--drift-amp) * var(--dy1, 0px)),
+        0
+      )
+      rotate(calc(var(--drift-amp) * var(--dr1, 0deg)));
+  }
+  to {
+    transform: translate3d(
+        calc(var(--drift-amp) * var(--dx2, 0px)),
+        calc(var(--drift-amp) * var(--dy2, 0px)),
+        0
+      )
+      rotate(calc(var(--drift-amp) * var(--dr2, 0deg)));
+  }
+}
+
+.hero__chip {
+  position: relative;
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--muted);
+  box-shadow: 0 2px 10px rgba(var(--tint-rgb), 0.06);
+}
+
+.hero__face--neutral {
+  display: block;
+}
+
+/* The colour flip is an opacity cross-fade between two stacked faces rather
+   than a background-color tween — same look, no repaint on 40 elements. */
+.hero__face--coded {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  opacity: 0;
+}
+
+.hero__slot[data-kind='waste'] .hero__face--coded {
+  color: var(--red);
+  border-color: rgba(var(--red-rgb), 0.38);
+  background: rgba(var(--red-rgb), 0.1);
+}
+
+.hero__slot[data-kind='convert'] .hero__face--coded {
+  color: var(--mint-soft);
+  border-color: rgba(var(--mint-rgb), 0.42);
+  background: rgba(var(--mint-rgb), 0.12);
+}
+
+/* --------------------------------------------------------------------------
+   Content plane
+   -------------------------------------------------------------------------- */
+
+.hero__content {
+  position: relative;
+  z-index: 2;
+  height: 100%;
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 4vh 32px 7vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  text-align: center;
+  pointer-events: none;
+}
+
+/* Soft wash behind the headline only. The converged grid now sits below the
+   type (see MOTION.chips.bounds), so this only has to cover the *scattered*
+   chips that stray upward early in the timeline — a much lighter touch than
+   blanking the middle of the stage. */
+.hero__content::before {
+  content: '';
+  position: absolute;
+  top: -6%;
+  left: -12%;
+  right: -12%;
+  height: 52%;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(
+    38rem 15rem at 50% 42%,
+    rgba(245, 241, 232, 0.92) 30%,
+    rgba(245, 241, 232, 0.6) 56%,
+    transparent 78%
+  );
+}
+
+.hero__top {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+
+.hero__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border: 1px solid var(--line-strong);
+  background: rgba(255, 255, 255, 0.7);
+  padding: 8px 14px;
+  border-radius: 999px;
+}
+
+.hero__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+.hero__dot--a { background: var(--amber); box-shadow: 0 0 10px rgba(var(--amber-rgb), 0.8); }
+.hero__dot--b { background: var(--mint); box-shadow: 0 0 10px rgba(var(--mint-rgb), 0.8); margin-left: -4px; }
+.hero__dot--c { background: var(--iris); box-shadow: 0 0 10px rgba(var(--iris-rgb), 0.8); margin-left: -4px; }
+
+.hero__headline {
+  font-size: clamp(38px, 4.8vw, 64px);
+  line-height: 1.04;
+  max-width: 17ch;
+}
+
+.hero__headline em { font-style: normal; }
+
+.hero__headline em.ital {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1.09em;
+  letter-spacing: 0;
+}
+
+.hero__headline em.pay { color: var(--amber-soft); }
+.hero__headline em.earn { color: var(--mint-soft); }
+
+/* SplitText writes overflow:hidden inline on the mask wrappers; these rules
+   are belt-and-braces, plus the padding that stops descenders being clipped. */
+.hero__line { display: block; }
+.hero__line-mask {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.12em;
+  margin-bottom: -0.12em;
+}
+
+/* --------------------------------------------------------------------------
+   Resolve block
+   -------------------------------------------------------------------------- */
+
+.hero__resolve {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  max-width: 620px;
+}
+
+.hero__counter-line {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.hero__counter {
+  font-family: var(--font-display);
+  font-size: clamp(34px, 4vw, 52px);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: var(--red);
+  /* Stops the number jiggling as digits change under the tween. */
+  font-variant-numeric: tabular-nums;
+}
+
+.hero__counter-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+
+.hero__copy {
+  font-size: 17.5px;
+  color: var(--muted);
+}
+.hero__copy strong { color: var(--ink); font-weight: 600; }
+
+.hero__actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  justify-content: center;
+  /* .hero__content is pointer-events:none so the decorative field underneath
+     stays inert; the CTAs opt back in. */
+  pointer-events: auto;
+}
+
+/* CTA styling ported from legacy/index.html. Press physics come from Framer
+   Motion on the element itself, so no :active transform here. */
+.cta,
+.secondary-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 13px 22px;
+  border-radius: 999px;
+  text-decoration: none;
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  cursor: pointer;
+  border: 0;
+  transition: box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.cta {
+  background: var(--ink);
+  color: var(--bg);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 10px 26px rgba(var(--tint-rgb), 0.16);
+}
+.cta:hover { box-shadow: 0 16px 36px rgba(var(--tint-rgb), 0.24); }
+
+.secondary-cta {
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid var(--line-strong);
+}
+.secondary-cta:hover { border-color: rgba(var(--tint-rgb), 0.38); background: #fff; }
+
+/* --------------------------------------------------------------------------
+   Mobile
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 899px) {
+  .hero__stage { min-height: 560px; }
+
+  .hero__content { padding: 3vh 20px 5vh; }
+
+  /* Small enough that the longest query still fits a 2-column cell at 390px.
+     If you lengthen the copy in heroChips.js, check this first. */
+  .hero__chip {
+    font-size: 9px;
+    padding: 5px 9px;
+  }
+  .hero__face--coded { padding: 5px 9px; }
+
+  /* Unconstrained width + a smaller size keeps the headline to four lines,
+     which is what leaves room for the cluster and the resolve block. */
+  .hero__headline { font-size: 30px; max-width: none; }
+  .hero__eyebrow { font-size: 9px; letter-spacing: 0.16em; padding: 7px 12px; }
+  .hero__resolve { gap: 14px; }
+  .hero__copy { font-size: 16px; }
+
+  /* Full-width tap targets, comfortably over the 42px floor. */
+  .hero__actions { width: 100%; flex-direction: column; align-items: stretch; }
+  .cta,
+  .secondary-cta { width: 100%; min-height: 48px; }
+}
+
+/* --------------------------------------------------------------------------
+   Reduced motion — final state, no pin, no drift, no Lenis.
+   -------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .hero__drift { animation: none; }
+
+  /* The stage keeps its 100vh box and simply renders the storyboard's final
+     frame — headline up, red culled, green tightened, copy and CTA in place.
+     Nothing is pinned, so the hero occupies exactly one viewport and the page
+     scrolls normally past it. */
+  .hero[data-motion='reduced'] .hero__stage {
+    min-height: 640px;
+  }
+
+  .cta,
+  .secondary-cta { transition: none; }
+}

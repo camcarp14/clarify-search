@@ -1,23 +1,51 @@
 # camcarp14.github.io — clarifysearch.com
 
-The Clarify Search marketing site. One static page, no build step, served by
-GitHub Pages at the apex domain in `CNAME`.
+The Clarify Search marketing site. **Mid-migration**: moving from one static
+`index.html` to React + Vite so the page can carry scroll-driven, pinned
+motion (GSAP + ScrollTrigger + Lenis).
 
-| File | Purpose |
+**Only the hero is ported so far.** The live site is still the legacy page.
+
+| Path | Purpose |
 | --- | --- |
-| `index.html` | The entire site — markup, CSS and JS in one file, no dependencies except Google Fonts |
+| `legacy/index.html` | The site as it ships today — markup, CSS and JS in one file. Still the source of truth for all copy, and for every section not yet ported |
+| `index.html` | Vite entry (head, fonts, `#root`) |
+| `src/components/Hero/` | The rebuilt hero. `hero.motion.js` is the tuning surface |
+| `src/lib/SmoothScroll.jsx` | Lenis, wired to the GSAP ticker and ScrollTrigger |
+| `src/styles/tokens.css` | Design tokens, ported verbatim from the legacy `:root` |
 | `CNAME` | `clarifysearch.com` — do not delete, GitHub Pages needs it to keep the custom domain |
 | `robots.txt` | Crawl rules; explicitly allows answer-engine bots |
 | `sitemap.xml` | Single-URL sitemap |
 
-## Deploying
+## Working on it
 
-Push to `main`. Pages republishes in roughly 40–90 seconds. Verify with a
-cache-buster, because CDN caching will otherwise show you the old page:
+```sh
+npm install
+npm run dev
+```
+
+Add `?motion-debug` to any URL to switch on ScrollTrigger markers and expose
+`window.__hero` / `window.__lenis` for poking at the timeline from the console.
+`VITE_MOTION_DEBUG=true` does the same per-environment.
+
+## Deploying — NOT cut over yet
+
+The live site is still served from `legacy/index.html`'s content on `main`.
+Do not point Pages at the Vite build until the rest of the page is ported, or
+the site loses everything below the hero.
+
+When it is time, that means a build step: GitHub Pages cannot run `vite build`
+on its own, so the cutover needs an Actions workflow that builds and publishes
+`dist/`. Verify with a cache-buster afterwards, because CDN caching will
+otherwise show you the old page:
 
 ```sh
 curl -sS -A "Mozilla/5.0 Chrome/131.0" "https://clarifysearch.com/?cb=$RANDOM" | grep "something you changed"
 ```
+
+Still to port from `legacy/index.html`: the `ProfessionalService` JSON-LD
+block (it describes offers this build does not render yet), the site header
+and nav, and every section from Diagnosis down.
 
 ## Open items
 
@@ -59,8 +87,15 @@ curl -sS -A "Mozilla/5.0 Chrome/131.0" "https://clarifysearch.com/?cb=$RANDOM" |
 ## Conventions
 
 - The checkout is CRLF. Edits made elsewhere in LF should be converted on the
-  way in (`sed 's/$/\r/'`) or the diff shows every line as changed.
+  way in (`sed 's/$/\r/'`) or the diff shows every line as changed. Files added
+  under `src/` are LF.
 - Motion is gated behind `prefers-reduced-motion`; keep new animation gated too.
+  In the React tree that means a `gsap.matchMedia()` branch that resolves to the
+  final state with no pin — see `Hero.jsx`.
+- Animate transform and opacity only. Chip home positions are written once with
+  `left`/`top` at layout time and never tweened.
+- Every animated section keeps its timing numbers in a sibling `*.motion.js`
+  config, not inline in the component.
 - Pricing lives in the `PRICING` object in the inline script and is rendered per
   channel — edit it there, not in the markup, or the segmented toggle will
   overwrite you. The same applies to the free tier's `FREE` object.

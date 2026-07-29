@@ -558,19 +558,67 @@ export const counter = ({
 /**
  * Canonical ScrollTrigger config for a SCRUB-NO-PIN section.
  */
+/**
+ * How far each section's timeline has ever been advanced. Keyed by the
+ * timeline, so it survives everything except a full teardown.
+ */
+const PEAK = new WeakMap()
+
+/**
+ * Advance a section's timeline to the scroll position — FORWARDS ONLY.
+ *
+ * A plain `scrub` ties the timeline to the scroll position in both directions,
+ * so scrolling back up un-reveals everything you just read and scrolling down
+ * again replays it. That is the behaviour being removed: once a section has
+ * revealed, it stays revealed.
+ *
+ * This keeps the reveal genuinely scroll-driven — progress still tracks the
+ * scroll position, so it is not a fade-in-on-enter — it simply refuses to go
+ * backwards. Lenis already lerps the scroll position, so setting progress
+ * directly each frame reads as smooth without a second layer of smoothing.
+ */
+const advance = (self) => {
+  const tl = self.animation
+  if (!tl) return
+  const peak = PEAK.get(tl) || 0
+  if (self.progress <= peak) return
+  PEAK.set(tl, self.progress)
+  tl.progress(self.progress)
+}
+
+/**
+ * Canonical ScrollTrigger config for a SCRUB-NO-PIN section.
+ *
+ * `toggleActions: 'none none none none'` is load-bearing: without a `scrub`,
+ * ScrollTrigger would otherwise play the timeline straight through on enter,
+ * and the playhead is driven by advance() instead.
+ */
 export const scrubbedTrigger = ({
   trigger,
   root,
   isMobile,
   window: win = SCRUB_WINDOW,
   extra = {},
-}) => ({
-  trigger,
-  start: isMobile ? win.mobile.start : win.desktop.start,
-  end: isMobile ? win.mobile.end : win.desktop.end,
-  scrub: win.scrub,
-  invalidateOnRefresh: true,
-  markers: DEBUG,
-  onToggle: (self) => root.classList.toggle('is-live', self.isActive),
-  ...extra,
-})
+}) => {
+  const { onToggle: sectionToggle, onUpdate: sectionUpdate, ...rest } = extra
+  return {
+    trigger,
+    start: isMobile ? win.mobile.start : win.desktop.start,
+    end: isMobile ? win.mobile.end : win.desktop.end,
+    toggleActions: 'none none none none',
+    invalidateOnRefresh: true,
+    markers: DEBUG,
+    onUpdate: (self) => {
+      advance(self)
+      if (sectionUpdate) sectionUpdate(self)
+    },
+    // A refresh re-measures the trigger; re-assert so a resize cannot drop a
+    // section back to a state the reader has already scrolled past.
+    onRefresh: (self) => advance(self),
+    onToggle: (self) => {
+      root.classList.toggle('is-live', self.isActive)
+      if (sectionToggle) sectionToggle(self)
+    },
+    ...rest,
+  }
+}

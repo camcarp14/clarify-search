@@ -77,11 +77,8 @@ const METRICS = [
  * and write it back after the split. The copy string itself still lives in
  * exactly one place (the JSX below); nothing is duplicated into JS.
  */
-const accessibleHeadingText = (el) => {
-  const clone = el.cloneNode(true)
-  clone.querySelectorAll('[data-onepage-ink]').forEach((n) => n.remove())
-  return (clone.textContent || '').replace(/\s+/g, ' ').trim()
-}
+const accessibleHeadingText = (el) =>
+  (el.textContent || '').replace(/\s+/g, ' ').trim()
 
 export default function Diagnosis() {
   const rootRef = useRef(null)
@@ -125,7 +122,6 @@ export default function Diagnosis() {
           type: 'lines',
           mask: 'lines',
           linesClass: 'diagnosis__line',
-          ignore: onePageInkRef.current,
         })
         heading.setAttribute('aria-label', label)
 
@@ -200,7 +196,7 @@ export default function Diagnosis() {
           )
           setIf(cards, { x: 0, y: 0 })
           setIf(seamRef.current, { opacity: 0 })
-          setIf(onePageInkRef.current, { opacity: 1 })
+          setIf(onePageInkRef.current, { color: 'var(--ink)' })
           setIf(metricInners, { yPercent: 0 })
           cHours.set()
           cContracts.set()
@@ -330,8 +326,8 @@ export default function Diagnosis() {
         if (onePageInkRef.current) {
           tl.fromTo(
             onePageInkRef.current,
-            { opacity: 0 },
-            { opacity: 1, duration: op.end - op.start, ease: op.ease },
+            { color: op.fromColor },
+            { color: op.toColor, duration: op.end - op.start, ease: op.ease },
             op.start,
           )
         }
@@ -451,21 +447,17 @@ export default function Diagnosis() {
             </span>
             <h2 ref={headingRef}>
               Most businesses run search as two silos. Google runs it as{' '}
-              {/* Two stacked layers, per rule 2. The in-flow span is the real,
-                  announced text and starts muted; the absolutely-positioned
-                  twin is aria-hidden, unselectable, and fades in over it. The
-                  wrapper is white-space: nowrap so SplitText can never need to
-                  clone it across a line break. */}
-              <span className="ital diagnosis__onepage">
-                <span className="diagnosis__onepage-face">one page</span>
-                <span
-                  className="diagnosis__onepage-face diagnosis__onepage-face--ink"
-                  data-onepage-ink
-                  aria-hidden="true"
-                  ref={onePageInkRef}
-                >
-                  one page
-                </span>
+              {/* ONE element. This was two stacked faces cross-faded on
+                  opacity — the in-flow text plus an absolutely-positioned
+                  twin. That construction breaks inside SplitText's line
+                  masks: when the heading re-wraps at a different width the
+                  relative parent ends up in a different box from its absolute
+                  child, and both words render, offset. It shipped looking like
+                  "runs it as one page one page." A colour tween on a single
+                  short span repaints two words, which is not a perf problem,
+                  and it cannot come apart. */}
+              <span className="ital diagnosis__onepage" ref={onePageInkRef}>
+                one page
               </span>
               .
             </h2>

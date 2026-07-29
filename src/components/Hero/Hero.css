@@ -20,6 +20,12 @@
   position: relative;
   height: 100vh;
   min-height: 600px;
+  /* The band the chip field occupies, as a share of the stage. Tuned so the
+     field always starts below the headline and ends above the resolve block.
+     Short viewports need the band later and tighter, because the headline
+     eats a larger share of a 900px screen than of a 1200px one. */
+  --field-top: 48%;
+  --field-bottom: 24%;
   /* Contains the scattered chips so nothing off-screen can create a
      horizontal scrollbar. `clip` does not create a containing block, so it
      cannot break ScrollTrigger's fixed-position pinning the way a transform
@@ -31,9 +37,23 @@
    Chip field
    -------------------------------------------------------------------------- */
 
+/* A BOUNDED, CLIPPED BAND — not the whole stage.
+   Previously `inset: 0`, which let a scattered chip land anywhere, including
+   on top of the headline and the counter. Measured at 1920 and 2560: chips
+   over .hero__headline and over .hero__counter. Percentage bounds inside a
+   full-stage box cannot prevent that, because the scatter offsets are
+   fractions of the box and the box was the whole screen.
+
+   Now the field is a box that starts below the type and ends above the resolve
+   block, with overflow clipped. A chip physically cannot reach the copy, at
+   any viewport width, in any state of the timeline. */
 .hero__field {
   position: absolute;
-  inset: 0;
+  left: 0;
+  right: 0;
+  top: var(--field-top, 48%);
+  bottom: var(--field-bottom, 22%);
+  overflow: clip;
   --drift-amp: 1;
   z-index: 1;
 }
@@ -136,7 +156,10 @@
   height: 100%;
   max-width: var(--max);
   margin: 0 auto;
-  padding: 4vh 32px 7vh;
+  /* The header is position:fixed and 76px tall, so the hero has to reserve
+     that space itself — nothing pushes it down. Without this the eyebrow
+     rendered at y=43 UNDER the nav, colliding with the links at every width. */
+  padding: calc(var(--nav-h, 76px) + 3vh) 32px 7vh;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -292,8 +315,16 @@
    Mobile
    -------------------------------------------------------------------------- */
 
+@media (min-height: 1000px) {
+  .hero__stage { --field-top: 44%; --field-bottom: 26%; }
+}
+
 @media (max-width: 899px) {
-  .hero__stage { min-height: 560px; }
+  .hero__stage {
+    min-height: 560px;
+    --field-top: 40%;
+    --field-bottom: 34%;
+  }
 
   .hero__content { padding: 3vh 20px 5vh; }
 

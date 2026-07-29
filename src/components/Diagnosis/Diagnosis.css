@@ -66,33 +66,14 @@ section.band.diagnosis {
    -------------------------------------------------------------------------- */
 
 .diagnosis__onepage {
-  position: relative;
-  display: inline-block;
-  /* Guarantees SplitText never has to clone this element across a line break,
-     which would duplicate the absolutely-positioned twin. */
-  white-space: nowrap;
+  /* Plain inline. No relative/absolute stacking, no nowrap: there is nothing
+     left that could be split away from a positioned parent. */
+  color: var(--muted);
 }
 
 /* Progress 0: the phrase is muted. --muted is 5.46:1 on the bone ground, so
    the un-animated state is readable on its own (it is also the state a no-JS
    or pre-hydration render shows). */
-.diagnosis__onepage-face {
-  display: block;
-  color: var(--muted);
-}
-
-/* Progress 1: it is ink. aria-hidden in the markup, so it is out of the
-   accessibility tree; unselectable so it never doubles a copy-paste. */
-.diagnosis__onepage-face--ink {
-  position: absolute;
-  inset: 0;
-  color: var(--ink);
-  opacity: 0;
-  pointer-events: none;
-  -webkit-user-select: none;
-  user-select: none;
-}
-
 /* --------------------------------------------------------------------------
    2. PAIN GRID  (legacy 606-615)
 
@@ -292,10 +273,6 @@ section.band.diagnosis {
 .diagnosis__seam,
 .diagnosis__standard,
 .diagnosis__metric-inner,
-.diagnosis__onepage-face--ink {
-  will-change: auto;
-}
-
 .diagnosis.is-live .diagnosis__line,
 .diagnosis.is-live .diagnosis__pain,
 .diagnosis.is-live .diagnosis__metric-inner {
@@ -304,9 +281,8 @@ section.band.diagnosis {
 .diagnosis.is-live .diagnosis__standard {
   will-change: transform, opacity;
 }
-.diagnosis.is-live .diagnosis__seam,
-.diagnosis.is-live .diagnosis__onepage-face--ink {
-  will-change: opacity;
+.diagnosis.is-live .diagnosis__seam {
+  will-change: transform;
 }
 
 /* --------------------------------------------------------------------------

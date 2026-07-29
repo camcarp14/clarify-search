@@ -144,6 +144,11 @@ export const MOTION = {
       start: 0.42,
       end: 0.6,
       ease: EASE.tint,
+      /** Both ends are warm dark neutrals, so the interpolated midpoint is a
+       *  warm dark neutral too — the usual objection to colour tweens (muddy
+       *  midpoints) does not apply between these two. */
+      fromColor: 'rgb(106, 96, 83)',
+      toColor: 'rgb(33, 28, 22)',
     },
 
     /**

@@ -25,6 +25,9 @@ const setIf = (targets, vars) => {
   if (list && (!Array.isArray(list) || list.length)) gsap.set(list, vars)
 }
 
+/** The intro is wall-clock, so it uses a real ease rather than a scrub curve. */
+const EASE_INTRO = 'power3.out'
+
 /** Framer Motion is scoped to component-level micro-interaction only — the
  *  scroll work is entirely GSAP's. Matches the press physics in
  *  saas-polish-system. */
@@ -180,6 +183,57 @@ export default function Hero() {
           root.dataset.motion = 'full'
           const pinVh = isMobile ? pin.mobileVh : pin.desktopVh
 
+          /* ================= INTRO — plays once, on load =================
+           * Wall-clock, not scrubbed. This is what the visitor sees before
+           * touching the wheel, and the whole reason it exists: the reveal used
+           * to live at progress 0.00-0.25 of the scrub, so the page landed with
+           * no headline over an out-of-focus field and read as broken.
+           *
+           * It writes the same properties the scrub later owns, so it must
+           * finish before the scrub's first beat can matter — which it does,
+           * because the scrub's opening tween is a no-op hold at progress 0. */
+          const eyebrow = root.querySelector('.hero__eyebrow')
+          const intro = gsap.timeline({ delay: MOTION.intro.startDelay })
+
+          intro.from(
+            split.lines,
+            {
+              yPercent: MOTION.intro.headlineFromYPercent,
+              duration: MOTION.intro.headlineDuration,
+              ease: EASE_INTRO,
+              stagger: MOTION.intro.headlineStagger,
+            },
+            0,
+          )
+          if (eyebrow) {
+            intro.from(
+              eyebrow,
+              {
+                opacity: 0,
+                y: 10,
+                duration: MOTION.intro.eyebrowDuration,
+                ease: EASE_INTRO,
+              },
+              0,
+            )
+          }
+          intro.from(
+            slots,
+            {
+              opacity: 0,
+              y: MOTION.intro.fieldFromY,
+              scale: MOTION.intro.fieldFromScale,
+              duration: MOTION.intro.fieldDuration,
+              ease: EASE_INTRO,
+              stagger: {
+                amount: MOTION.intro.fieldStagger * slots.length,
+                from: 'center',
+                grid: [Math.ceil(activeChips.length / cols), cols],
+              },
+            },
+            MOTION.intro.eyebrowDuration * 0.5,
+          )
+
           // Resolve block starts hidden; its tweens are immediateRender:false
           // so they must not be the thing that establishes the state.
           setIf([counterLineRef.current, ...resolveItems], {
@@ -210,71 +264,36 @@ export default function Hero() {
           // === scroll progress and the MOTION numbers read as the storyboard.
           tl.to({}, { duration: 1 }, 0)
 
-          /* ---- 0.00 → 0.25 · headline masks up, line by line ---- */
-          const hl = seq.headline
-          tl.from(
-            split.lines,
-            {
-              yPercent: hl.fromYPercent,
-              duration: fit(
-                hl.end - hl.start,
-                (split.lines.length - 1) * hl.staggerEach,
-              ),
-              ease: hl.ease,
-              stagger: hl.staggerEach,
-            },
-            hl.start,
-          )
-
-          /* ---- 0.25 → 0.50 · chips converge into the ordered grid ----
-           * This fromTo carries immediateRender (the default), which is what
-           * paints the scattered field at progress 0. Every tween after this
-           * one must set immediateRender:false or it will stomp that state. */
-          const cv = seq.converge
+          /* ---- the composed opening frame ----
+           * The headline and the ordered field are NOT scrubbed any more; the
+           * intro timeline below paints them on load. The scrub therefore
+           * starts from a page that already reads, and owns only the three
+           * beats that dramatise the product.
+           *
+           * This fromTo carries immediateRender (the default), so it is what
+           * establishes the chips' resting state at progress 0. Every tween
+           * after it must set immediateRender:false or it will stomp that. */
+          const co = seq.colour
           tl.fromTo(
             slots,
-            {
-              x: (i, el) => chipOf(el).scatterX * FW,
-              y: (i, el) => chipOf(el).scatterY * FH,
-              rotation: (i, el) => chipOf(el).scatterRotation,
-              scale: (i, el) => chipOf(el).scatterScale,
-              opacity: scatter.opacity,
-              filter: CHIPS.blurEnabled
-                ? `blur(${scatter.blurPx}px)`
-                : 'blur(0px)',
-            },
-            {
-              x: 0,
-              y: 0,
-              rotation: 0,
-              scale: 1,
-              opacity: 1,
-              filter: 'blur(0px)',
-              duration: fit(cv.end - cv.start, cv.staggerAmount),
-              ease: cv.ease,
-              stagger: {
-                amount: cv.staggerAmount,
-                from: cv.staggerFrom,
-                grid: [Math.ceil(activeChips.length / cols), cols],
-              },
-            },
-            cv.start,
+            { x: 0, y: 0, rotation: 0, scale: 1, opacity: 1, filter: 'blur(0px)' },
+            { x: 0, y: 0, rotation: 0, scale: 1, opacity: 1, filter: 'blur(0px)', duration: 0.001 },
+            0,
           )
 
-          // Idle drift amplitude falls away as the field orders itself.
+          // Idle drift amplitude falls away as the field commits to an answer.
           tl.to(
             field,
             {
               '--drift-amp': 0,
-              duration: (cv.end - cv.start) * cv.driftFadeEnd,
+              duration: (co.end - co.start) * co.driftFadeEnd,
               ease: 'none',
               immediateRender: false,
             },
-            cv.start,
+            co.start,
           )
 
-          /* ---- 0.50 → 0.70 · colour-code, with a scale punch on the flip ---- */
-          const co = seq.colour
+          /* ---- 0.00 → 0.35 · colour-code, with a scale punch on the flip ---- */
           const coDur = fit(co.end - co.start, co.staggerAmount)
           const punchUp = coDur * co.punchSplit
           const punchDown = coDur - punchUp
@@ -316,7 +335,7 @@ export default function Hero() {
             co.start + punchUp,
           )
 
-          /* ---- 0.70 → 0.85 · red falls out, green tightens to fill ---- */
+          /* ---- 0.35 → 0.70 · waste falls out, survivors tighten to fill ---- */
           const cu = seq.cull
           tl.fromTo(
             reds,
@@ -349,7 +368,7 @@ export default function Hero() {
             cu.start + cu.tightenOffset,
           )
 
-          /* ---- 0.85 → 1.00 · counter runs, copy fades up, unpin ---- */
+          /* ---- 0.70 → 1.00 · counter runs, copy lands, unpin ---- */
           const rs = seq.resolve
           const readout = { v: 0 }
 

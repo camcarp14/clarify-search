@@ -14,6 +14,9 @@
 #
 # If this site ever becomes the real production host, delete the [[headers]]
 # block and the robots directive in the same commit that points the domain here.
+#
+# Preview builds also carry a <meta name="robots" noindex> tag (vite.config.js),
+# so the noindex survives even where headers do not reach.
 # ============================================================================
 
 [build]
@@ -39,9 +42,3 @@
   for = "/"
   [headers.values]
     Cache-Control = "no-cache"
-
-[[redirects]]
-  from = "/robots.txt"
-  to = "/_preview-robots.txt"
-  status = 200
-  force = true

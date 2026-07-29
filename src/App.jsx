@@ -71,10 +71,9 @@ export default function App() {
 
   return (
     <SmoothScroll>
-      <a className="skip-link" href="#main">
-        Skip to content
-      </a>
-
+      {/* The skip link belongs to SiteHeader, which owns the focus handling
+          and the Lenis-aware jump. Rendering a second one here put two
+          identical links at the top of the tab order. */}
       <SiteHeader />
 
       <main id="main" tabIndex={-1}>

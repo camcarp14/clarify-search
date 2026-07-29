@@ -1,5 +1,0 @@
-# Review preview of the Clarify Search rebuild. Not the live site.
-# The live site is https://clarifysearch.com/ — this copy must never be indexed
-# or it competes with it for the same terms.
-User-agent: *
-Disallow: /

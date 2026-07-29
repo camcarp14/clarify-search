@@ -1,0 +1,47 @@
+# ============================================================================
+# NETLIFY — REVIEW PREVIEW ONLY. NOT the production deploy.
+# ============================================================================
+# clarifysearch.com is served by GitHub Pages from legacy/index.html's content
+# on `main`. This file exists so the rebuilt React site can be reviewed on a
+# real device at a throwaway .netlify.app URL without touching that.
+#
+# THE noindex HEADER BELOW IS LOAD-BEARING. A publicly crawlable second copy of
+# the marketing site is duplicate content pointed at the same keywords as
+# clarifysearch.com — a self-inflicted SEO problem, and a particularly bad one
+# for a business that sells search visibility. Netlify applies noindex to
+# *deploy previews* automatically but NOT to a site's production deploy, which
+# is what this is. Do not remove it while this remains a preview.
+#
+# If this site ever becomes the real production host, delete the [[headers]]
+# block and the robots directive in the same commit that points the domain here.
+# ============================================================================
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+
+# Hashed assets are immutable; the HTML must never be cached or a reviewer
+# refreshing on their phone keeps getting the previous build.
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[redirects]]
+  from = "/robots.txt"
+  to = "/_preview-robots.txt"
+  status = 200
+  force = true

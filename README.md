@@ -1,21 +1,21 @@
 # camcarp14.github.io — clarifysearch.com
 
-The Clarify Search marketing site. **Mid-migration**: moving from one static
-`index.html` to React + Vite so the page can carry scroll-driven, pinned
-motion (GSAP + ScrollTrigger + Lenis).
-
-**Only the hero is ported so far.** The live site is still the legacy page.
+The Clarify Search marketing site: React + Vite, with scroll-driven pinned
+motion (GSAP + ScrollTrigger + Lenis). Served by GitHub Pages from the ROOT of
+`main` at the apex domain in `CNAME`.
 
 | Path | Purpose |
 | --- | --- |
-| `legacy/index.html` | The site as it ships today — markup, CSS and JS in one file. Still the source of truth for all copy, and for every section not yet ported |
-| `index.html` | Vite entry (head, fonts, `#root`) |
-| `src/components/Hero/` | The rebuilt hero. `hero.motion.js` is the tuning surface |
-| `src/lib/SmoothScroll.jsx` | Lenis, wired to the GSAP ticker and ScrollTrigger |
-| `src/styles/tokens.css` | Design tokens, ported verbatim from the legacy `:root` |
-| `CNAME` | `clarifysearch.com` — do not delete, GitHub Pages needs it to keep the custom domain |
-| `robots.txt` | Crawl rules; explicitly allows answer-engine bots |
-| `sitemap.xml` | Single-URL sitemap |
+| `index.html`, `assets/` | **Build output, committed.** Pages serves these. Never hand-edit them — the next `npm run deploy` overwrites them |
+| `app/index.html` | The Vite source entry (head, meta, fonts, JSON-LD). This is the file to edit for anything in `<head>` |
+| `src/components/<Name>/` | One directory per section: `Name.jsx`, `name.motion.js`, `Name.css` |
+| `src/motion/system.js` | The shared physics — eases, beats, staggers, travel, pin budgets. Imported by every section |
+| `src/lib/SmoothScroll.jsx` | Lenis, wired to the GSAP ticker; exports `useLenis()` |
+| `scripts/prerender.mjs` | Bakes the rendered app into the HTML at build time |
+| `scripts/deploy-to-root.mjs` | Copies `dist/` to the repo root for Pages |
+| `legacy/index.html` | The previous single-file site. Kept as the copy reference |
+| `CNAME` | `clarifysearch.com` — do not delete, Pages needs it for the custom domain |
+| `robots.txt`, `sitemap.xml` | Crawl rules and sitemap |
 
 ## Working on it
 
@@ -24,28 +24,42 @@ npm install
 npm run dev
 ```
 
-Add `?motion-debug` to any URL to switch on ScrollTrigger markers and expose
-`window.__hero` / `window.__lenis` for poking at the timeline from the console.
-`VITE_MOTION_DEBUG=true` does the same per-environment.
+Add `?motion-debug` to any URL for ScrollTrigger markers plus `window.__hero`
+and `window.__lenis` in the console. `VITE_MOTION_DEBUG=true` does the same
+per-environment.
 
-## Deploying — NOT cut over yet
+Tune motion by editing numbers in a section's `*.motion.js`. Nothing in a
+`.jsx` should need to change to re-time a sequence.
 
-The live site is still served from `legacy/index.html`'s content on `main`.
-Do not point Pages at the Vite build until the rest of the page is ported, or
-the site loses everything below the hero.
+## Deploying
 
-When it is time, that means a build step: GitHub Pages cannot run `vite build`
-on its own, so the cutover needs an Actions workflow that builds and publishes
-`dist/`. Verify with a cache-buster afterwards, because CDN caching will
-otherwise show you the old page:
+```sh
+npm run build     # client + ssr + prerender
+npm run deploy    # copy dist/ to the repo root
+git add -A && git commit && git push origin main
+```
+
+Pages republishes in roughly 40–90 seconds. Verify with a cache-buster, because
+CDN caching will otherwise show you the old page:
 
 ```sh
 curl -sS -A "Mozilla/5.0 Chrome/131.0" "https://clarifysearch.com/?cb=$RANDOM" | grep "something you changed"
 ```
 
-Still to port from `legacy/index.html`: the `ProfessionalService` JSON-LD
-block (it describes offers this build does not render yet), the site header
-and nav, and every section from Diagnosis down.
+**Why the entry html lives in `app/`:** Pages serves the repo root, so root
+`index.html` has to be the *built* file — and Vite's source entry is also
+called `index.html`. Two different files, one path. Moving the source back to
+the root makes every deploy overwrite it.
+
+**Why the build prerenders:** without it the page ships an empty
+`<div id="root">` and zero readable content. The AI answer engines this site
+markets against are far less reliable than Googlebot at running JavaScript
+before reading a page. `deploy-to-root.mjs` refuses to publish if the mount
+point is empty, so a silent prerender failure cannot reach the domain.
+
+**Rolling back:** `ec7e115` is the last commit of the pre-rebuild static site.
+`git revert` the merge, or `git checkout ec7e115 -- index.html` and delete
+`assets/` to restore it, then push.
 
 ## Open items
 
@@ -86,9 +100,8 @@ and nav, and every section from Diagnosis down.
 
 ## Conventions
 
-- The checkout is CRLF. Edits made elsewhere in LF should be converted on the
-  way in (`sed 's/$/\r/'`) or the diff shows every line as changed. Files added
-  under `src/` are LF.
+- The checkout is CRLF for the legacy file; everything under `src/`, `app/` and
+  `scripts/` is LF.
 - Motion is gated behind `prefers-reduced-motion`; keep new animation gated too.
   In the React tree that means a `gsap.matchMedia()` branch that resolves to the
   final state with no pin — see `Hero.jsx`.
@@ -96,9 +109,8 @@ and nav, and every section from Diagnosis down.
   `left`/`top` at layout time and never tweened.
 - Every animated section keeps its timing numbers in a sibling `*.motion.js`
   config, not inline in the component.
-- Pricing lives in the `PRICING` object in the inline script and is rendered per
-  channel — edit it there, not in the markup, or the segmented toggle will
-  overwrite you. The same applies to the free tier's `FREE` object.
+- Pricing lives in `src/components/Pricing/pricing.data.js` (`PRICING`, `FREE`,
+  `CAPTIONS`) and is rendered per channel — edit it there, not in the markup.
 - CTA links use `data-offer="<Tier> — <Channel>"` and preselect the contact
   form's service dropdown **by matching the option text**. A new CTA needs a
   matching `<option>` or the preselect silently does nothing.

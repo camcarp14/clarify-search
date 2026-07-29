@@ -3,13 +3,13 @@
    Layout only. Every timing/distance number lives in hero.motion.js.
    ========================================================================== */
 
-/* Registered so GSAP can interpolate the drift amplitude smoothly. Without
-   the @property registration the custom property is a plain string and would
-   jump 1 → 0 instead of easing. Chrome 85+, Safari 16.4+, Firefox 128+. */
-@property --drift-amp {
+/* Registered so GSAP can interpolate the verdict strength smoothly. Without
+   the @property registration this custom property is a plain string and would
+   jump 0 → 1 instead of easing. Chrome 85+, Safari 16.4+, Firefox 128+. */
+@property --verdict {
   syntax: '<number>';
-  initial-value: 1;
-  inherits: true;
+  initial-value: 0;
+  inherits: false;
 }
 
 .hero {
@@ -19,131 +19,8 @@
 .hero__stage {
   position: relative;
   height: 100vh;
-  min-height: 600px;
-  /* The band the chip field occupies, as a share of the stage. Tuned so the
-     field always starts below the headline and ends above the resolve block.
-     Short viewports need the band later and tighter, because the headline
-     eats a larger share of a 900px screen than of a 1200px one. */
-  --field-top: 48%;
-  --field-bottom: 24%;
-  /* Contains the scattered chips so nothing off-screen can create a
-     horizontal scrollbar. `clip` does not create a containing block, so it
-     cannot break ScrollTrigger's fixed-position pinning the way a transform
-     or filter on an ancestor would. */
+  min-height: 660px;
   overflow: clip;
-}
-
-/* --------------------------------------------------------------------------
-   Chip field
-   -------------------------------------------------------------------------- */
-
-/* A BOUNDED, CLIPPED BAND — not the whole stage.
-   Previously `inset: 0`, which let a scattered chip land anywhere, including
-   on top of the headline and the counter. Measured at 1920 and 2560: chips
-   over .hero__headline and over .hero__counter. Percentage bounds inside a
-   full-stage box cannot prevent that, because the scatter offsets are
-   fractions of the box and the box was the whole screen.
-
-   Now the field is a box that starts below the type and ends above the resolve
-   block, with overflow clipped. A chip physically cannot reach the copy, at
-   any viewport width, in any state of the timeline. */
-.hero__field {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: var(--field-top, 48%);
-  bottom: var(--field-bottom, 22%);
-  overflow: clip;
-  --drift-amp: 1;
-  z-index: 1;
-}
-
-/* left/top are written once by JS at layout time and never animated.
-   The timeline only ever touches transform / opacity / filter. */
-.hero__slot {
-  position: absolute;
-  top: 0;
-  left: 0;
-}
-
-/* will-change is applied only while the pin is actually active — promoting
-   40 layers for the whole page life costs memory for nothing. The .is-live
-   class is toggled by the ScrollTrigger onToggle. */
-.hero__field.is-live .hero__slot {
-  will-change: transform, opacity, filter;
-}
-
-/* Separate wrapper so the idle drift never fights the scrubbed transform
-   written on .hero__slot. Two elements, two transform channels. */
-.hero__drift {
-  animation: chipDrift var(--drift-dur, 8s) ease-in-out infinite alternate;
-  animation-delay: var(--drift-delay, 0s);
-}
-
-@keyframes chipDrift {
-  from {
-    transform: translate3d(
-        calc(var(--drift-amp) * var(--dx1, 0px)),
-        calc(var(--drift-amp) * var(--dy1, 0px)),
-        0
-      )
-      rotate(calc(var(--drift-amp) * var(--dr1, 0deg)));
-  }
-  to {
-    transform: translate3d(
-        calc(var(--drift-amp) * var(--dx2, 0px)),
-        calc(var(--drift-amp) * var(--dy2, 0px)),
-        0
-      )
-      rotate(calc(var(--drift-amp) * var(--dr2, 0deg)));
-  }
-}
-
-.hero__chip {
-  position: relative;
-  display: inline-block;
-  font-family: var(--font-mono);
-  font-size: 11.5px;
-  font-weight: 500;
-  line-height: 1.2;
-  letter-spacing: -0.01em;
-  white-space: nowrap;
-  padding: 7px 12px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  background: var(--surface);
-  color: var(--muted);
-  box-shadow: 0 2px 10px rgba(var(--tint-rgb), 0.06);
-}
-
-.hero__face--neutral {
-  display: block;
-}
-
-/* The colour flip is an opacity cross-fade between two stacked faces rather
-   than a background-color tween — same look, no repaint on 40 elements. */
-.hero__face--coded {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 7px 12px;
-  border-radius: 999px;
-  border: 1px solid transparent;
-  opacity: 0;
-}
-
-.hero__slot[data-kind='waste'] .hero__face--coded {
-  color: var(--red);
-  border-color: rgba(var(--red-rgb), 0.38);
-  background: rgba(var(--red-rgb), 0.1);
-}
-
-.hero__slot[data-kind='convert'] .hero__face--coded {
-  color: var(--mint-soft);
-  border-color: rgba(var(--mint-rgb), 0.42);
-  background: rgba(var(--mint-rgb), 0.12);
 }
 
 /* --------------------------------------------------------------------------
@@ -154,46 +31,28 @@
   position: relative;
   z-index: 2;
   height: 100%;
-  max-width: var(--max);
+  max-width: 1120px;
   margin: 0 auto;
-  /* The header is position:fixed and 76px tall, so the hero has to reserve
-     that space itself — nothing pushes it down. Without this the eyebrow
-     rendered at y=43 UNDER the nav, colliding with the links at every width. */
-  padding: calc(var(--nav-h, 76px) + 3vh) 32px 7vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
+  /* The header is position:fixed, so the hero reserves its own clearance —
+     nothing pushes it down. */
+  padding: calc(var(--nav-h, 76px) + 2.5vh) 32px 5vh;
+  display: grid;
+  /* minmax(0, 1fr): a bare `1fr` floors at the panel's intrinsic height, so
+     the panel refused to shrink and pushed into the headline and the copy at
+     every viewport. This lets the middle row actually be the leftover space. */
+  grid-template-rows: auto minmax(0, 1fr) auto;
   align-items: center;
+  justify-items: center;
+  gap: clamp(14px, 2.4vh, 30px);
   text-align: center;
   pointer-events: none;
-}
-
-/* Soft wash behind the headline only. The converged grid now sits below the
-   type (see MOTION.chips.bounds), so this only has to cover the *scattered*
-   chips that stray upward early in the timeline — a much lighter touch than
-   blanking the middle of the stage. */
-.hero__content::before {
-  content: '';
-  position: absolute;
-  top: -6%;
-  left: -12%;
-  right: -12%;
-  height: 52%;
-  z-index: -1;
-  pointer-events: none;
-  background: radial-gradient(
-    38rem 15rem at 50% 42%,
-    rgba(245, 241, 232, 0.92) 30%,
-    rgba(245, 241, 232, 0.6) 56%,
-    transparent 78%
-  );
 }
 
 .hero__top {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 18px;
+  gap: 16px;
 }
 
 .hero__eyebrow {
@@ -205,26 +64,24 @@
   font-weight: 600;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--muted);
-  border: 1px solid var(--line-strong);
-  background: rgba(255, 255, 255, 0.7);
-  padding: 8px 14px;
+  color: var(--muted-2);
+  border: 1px solid var(--line);
+  background: var(--panel);
+  box-shadow: var(--lift-1);
+  padding: 8px 15px;
   border-radius: 999px;
 }
 
-.hero__dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-}
-.hero__dot--a { background: var(--amber); box-shadow: 0 0 10px rgba(var(--amber-rgb), 0.8); }
-.hero__dot--b { background: var(--mint); box-shadow: 0 0 10px rgba(var(--mint-rgb), 0.8); margin-left: -4px; }
-.hero__dot--c { background: var(--iris); box-shadow: 0 0 10px rgba(var(--iris-rgb), 0.8); margin-left: -4px; }
+.hero__dot { width: 6px; height: 6px; border-radius: 50%; }
+.hero__dot--a { background: var(--amber); }
+.hero__dot--b { background: var(--mint); margin-left: -4px; }
+.hero__dot--c { background: var(--iris); margin-left: -4px; }
 
 .hero__headline {
-  font-size: clamp(38px, 4.8vw, 64px);
-  line-height: 1.04;
-  max-width: 17ch;
+  font-size: clamp(32px, 3.7vw, 54px);
+  line-height: 1.03;
+  max-width: 24ch;
+  letter-spacing: -0.025em;
 }
 
 .hero__headline em { font-style: normal; }
@@ -240,8 +97,6 @@
 .hero__headline em.pay { color: var(--amber-soft); }
 .hero__headline em.earn { color: var(--mint-soft); }
 
-/* SplitText writes overflow:hidden inline on the mask wrappers; these rules
-   are belt-and-braces, plus the padding that stops descenders being clipped. */
 .hero__line { display: block; }
 .hero__line-mask {
   display: block;
@@ -251,6 +106,232 @@
 }
 
 /* --------------------------------------------------------------------------
+   The results page — the hero's artifact
+   Shares its visual language with the SERP mock in #ai-visibility on purpose.
+   One artifact seen twice reads as a product; two different mocks read as two
+   mockups.
+   -------------------------------------------------------------------------- */
+
+.hero__serp {
+  width: min(100%, 700px);
+  max-height: 100%;
+  align-self: center;
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  overflow: hidden;
+  background: var(--panel);
+  box-shadow: var(--lift-4);
+  pointer-events: none;
+}
+
+.hero__serp-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(var(--tint-rgb), 0.05), rgba(var(--tint-rgb), 0.02));
+}
+
+.hero__serp-dots { display: flex; gap: 5px; }
+.hero__serp-dots i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(var(--tint-rgb), 0.16);
+}
+
+.hero__serp-omni {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  padding: 7px 13px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+  /* The query is split into characters and scrubbed; clipping to the omnibox
+     means a mid-scrub state can never push the pill open. */
+  overflow: hidden;
+  white-space: nowrap;
+}
+.hero__serp-omni svg { opacity: 0.45; flex-shrink: 0; }
+
+.hero__serp-caret {
+  width: 1.5px;
+  height: 12px;
+  background: var(--amber);
+  flex-shrink: 0;
+  animation: heroCaret 1s steps(1) infinite;
+}
+@keyframes heroCaret { 50% { opacity: 0; } }
+
+.hero__serp-rows { position: relative; }
+
+.hero__serp-row {
+  position: relative;
+  display: grid;
+  gap: 3px;
+  padding: 11px 18px 11px 22px;
+  border-bottom: 1px solid rgba(var(--tint-rgb), 0.07);
+  /* The verdict strength, 0 → 1, tweened by the scrub. Every visual the mark
+     drives reads from this one number. */
+  --verdict: 0;
+}
+.hero__serp-row:last-child { border-bottom: 0; }
+
+/* The 3px rail down the left of every row, tinted per kind. */
+.hero__serp-row::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--row-acc, rgba(var(--tint-rgb), 0.14));
+}
+
+.hero__serp-row.is-ai {
+  --row-acc: var(--iris);
+  --row-acc-text: var(--iris-soft);
+  background: rgba(var(--iris-rgb), 0.05);
+}
+.hero__serp-row.is-paid {
+  --row-acc: var(--amber);
+  --row-acc-text: var(--amber-soft);
+}
+.hero__serp-row.is-org {
+  --row-acc: var(--mint);
+  --row-acc-text: var(--mint-soft);
+}
+
+/* Marked rows wash toward their accent as --verdict rises. A single
+   colour-mix driven by one animated number, so the scrub tweens one property
+   per row rather than a background, a border and a shadow separately. */
+.hero__serp-row.has-verdict {
+  background: color-mix(
+    in srgb,
+    var(--row-acc) calc(var(--verdict) * 9%),
+    transparent
+  );
+}
+.hero__serp-row.has-verdict::before {
+  width: calc(3px + var(--verdict) * 2px);
+}
+
+.hero__serp-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--row-acc-text, var(--muted-2));
+}
+
+.hero__serp-badge {
+  font-style: normal;
+  font-size: 8px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid rgba(var(--iris-rgb), 0.45);
+  background: rgba(var(--iris-rgb), 0.1);
+}
+
+.hero__serp-url {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--muted-2);
+}
+
+.hero__serp-title {
+  position: relative;
+  display: inline-block;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+.hero__serp-trailing {
+  font-weight: 400;
+  color: var(--muted);
+}
+
+/* The strike wipes across from the left; scaleX only, no width tween. */
+.hero__serp-strike {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1.5px;
+  background: var(--red);
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
+.hero__serp-note {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+/* ABSOLUTELY POSITIONED, on purpose. In the row's grid flow it reserved its
+   own line of height while sitting at opacity 0, which made every row tall and
+   hollow before the mark ever landed — and pushed the panel past the viewport.
+   Out of flow, the row is as tall as its text and the pill annotates from the
+   right. */
+.hero__serp-verdict {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 4px 9px;
+  border-radius: 999px;
+  border: 1px solid;
+}
+.hero__serp-row.is-paid .hero__serp-verdict {
+  color: var(--red);
+  border-color: rgba(var(--red-rgb), 0.35);
+  background: rgba(var(--red-rgb), 0.08);
+}
+.hero__serp-row.is-owned .hero__serp-verdict {
+  color: var(--mint-soft);
+  border-color: rgba(var(--mint-rgb), 0.4);
+  background: rgba(var(--mint-rgb), 0.1);
+}
+
+/* The rail linking the bought click to the one already owned. Sits in the
+   left gutter and grows downward. */
+.hero__serp-rail {
+  position: absolute;
+  left: 10px;
+  top: 26%;
+  height: 30%;
+  width: 2px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, var(--red), var(--mint));
+  transform: scaleY(0);
+  transform-origin: top center;
+  z-index: 3;
+}
+
+.hero.is-live .hero__serp-row,
+.hero.is-live .hero__serp-rail { will-change: transform, opacity; }
+
+/* --------------------------------------------------------------------------
    Resolve block
    -------------------------------------------------------------------------- */
 
@@ -258,31 +339,31 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 18px;
-  max-width: 620px;
+  gap: 14px;
+  max-width: 640px;
 }
 
 .hero__counter-line {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
 .hero__counter {
   font-family: var(--font-display);
-  font-size: clamp(34px, 4vw, 52px);
+  font-size: clamp(28px, 3vw, 40px);
   font-weight: 700;
   line-height: 1;
   letter-spacing: -0.03em;
   color: var(--red);
-  /* Stops the number jiggling as digits change under the tween. */
   font-variant-numeric: tabular-nums;
 }
 
 .hero__counter-label {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -290,7 +371,7 @@
 }
 
 .hero__copy {
-  font-size: 17.5px;
+  font-size: 16.5px;
   color: var(--muted);
 }
 .hero__copy strong { color: var(--ink); font-weight: 600; }
@@ -301,69 +382,98 @@
   gap: 14px;
   flex-wrap: wrap;
   justify-content: center;
-  /* .hero__content is pointer-events:none so the decorative field underneath
-     stays inert; the CTAs opt back in. */
+  /* .hero__content is pointer-events:none so the artifact stays inert; the
+     CTAs opt back in. */
   pointer-events: auto;
 }
 
-/* Base .cta / .secondary-cta styling now lives in src/styles/components.css —
-   the header, pricing and contact sections need the same buttons, and this
-   file loads after components.css, so a copy here would silently win the
-   cascade for the hero alone. Only hero-scoped overrides belong below. */
+/* --------------------------------------------------------------------------
+   SHORT VIEWPORTS
+
+   The hero is pinned, so everything has to fit one viewport — there is no
+   scrolling past a too-tall composition. A 1366x768 laptop has ~230px of room
+   for a panel that wants 346, and `max-height` only clipped it. Height is a
+   first-class breakpoint here, not an afterthought.
+   -------------------------------------------------------------------------- */
+
+@media (min-width: 900px) and (max-height: 900px) {
+  .hero__content {
+    padding: calc(var(--nav-h, 76px) + 1.2vh) 32px 3vh;
+    gap: 10px;
+  }
+  .hero__top { gap: 10px; }
+  /* Wider measure so the headline sets in two lines instead of three, which is
+     where most of the reclaimed height comes from. */
+  .hero__headline { font-size: clamp(28px, 2.9vw, 42px); max-width: 32ch; }
+  .hero__resolve { gap: 10px; }
+  .hero__counter { font-size: clamp(26px, 2.4vw, 32px); }
+  .hero__copy { font-size: 15px; }
+  .hero__serp-row { padding: 9px 16px 9px 20px; }
+  .hero__serp-bar { padding: 9px 12px; }
+}
+
+@media (min-width: 900px) and (max-height: 760px) {
+  .hero__headline { font-size: clamp(25px, 2.5vw, 34px); }
+  .hero__eyebrow { display: none; }
+  .hero__serp-note { display: none; }
+}
 
 /* --------------------------------------------------------------------------
    Mobile
    -------------------------------------------------------------------------- */
 
-@media (min-height: 1000px) {
-  .hero__stage { --field-top: 44%; --field-bottom: 26%; }
-}
-
 @media (max-width: 899px) {
-  .hero__stage {
-    min-height: 560px;
-    --field-top: 40%;
-    --field-bottom: 34%;
-  }
+  .hero__stage { min-height: 600px; }
+  .hero__content { padding: calc(var(--nav-h, 68px) + 2vh) 18px 4vh; gap: 12px; }
 
-  .hero__content { padding: 3vh 20px 5vh; }
-
-  /* Small enough that the longest query still fits a 2-column cell at 390px.
-     If you lengthen the copy in heroChips.js, check this first. */
-  .hero__chip {
-    font-size: 9px;
-    padding: 5px 9px;
-  }
-  .hero__face--coded { padding: 5px 9px; }
-
-  /* Unconstrained width + a smaller size keeps the headline to four lines,
-     which is what leaves room for the cluster and the resolve block. */
-  .hero__headline { font-size: 30px; max-width: none; }
+  .hero__headline { font-size: clamp(27px, 7.4vw, 34px); max-width: none; }
   .hero__eyebrow { font-size: 9px; letter-spacing: 0.16em; padding: 7px 12px; }
-  .hero__resolve { gap: 14px; }
-  .hero__copy { font-size: 16px; }
 
-  /* Full-width tap targets, comfortably over the 42px floor.
-     SCOPED to .hero__actions on purpose: an unscoped `.cta { width: 100% }`
-     here leaks out and blows the header nav row apart on mobile, because the
-     header's own CTA rule never sets width and so cannot win the cascade. */
+  .hero__serp { width: 100%; border-radius: 14px; }
+  .hero__serp-bar { padding: 8px 11px; }
+  .hero__serp-row { padding: 8px 12px 8px 16px; }
+  .hero__serp-title { font-size: 12.5px; }
+  .hero__serp-note { font-size: 10.5px; }
+  .hero__serp-omni { font-size: 9.5px; padding: 6px 10px; }
+  .hero__serp-rail { left: 7px; }
+  /* No room to annotate from the right on a phone; the pill goes back into
+     the flow under the title, where it has somewhere to live. */
+  .hero__serp-verdict {
+    position: static;
+    transform: none;
+    justify-self: start;
+    margin-top: 4px;
+  }
+
+  .hero__copy { font-size: 15px; }
+  .hero__resolve { gap: 10px; }
+  /* A phone has no room for a note under every result AND the copy below the
+     panel. The notes are the first thing to go: the verdict pills carry the
+     same argument and are what the scroll actually marks. */
+  .hero__serp-note { display: none; }
+  .hero__serp-url { font-size: 9.5px; }
+  .hero__serp-tag { font-size: 8px; }
+
+  /* The AI row is cut on phones. A pinned hero must fit one viewport, and at
+     390x844 the panel wanted 350px of a 268px slot. The argument the hero
+     makes is the OVERLAP — a click bought on a term already ranked #1 — and
+     that needs exactly two rows. The AI-answer beat is not lost:
+     #ai-visibility is a whole pinned section about it. */
+  .hero__serp-row.is-ai { display: none; }
+
   .hero__actions { width: 100%; flex-direction: column; align-items: stretch; }
+  /* SCOPED. An unscoped `.cta { width: 100% }` here leaks out and blows the
+     header nav row apart on mobile. */
   .hero__actions .cta,
   .hero__actions .secondary-cta { width: 100%; min-height: 48px; }
 }
 
 /* --------------------------------------------------------------------------
-   Reduced motion — final state, no pin, no drift, no Lenis.
+   Reduced motion — the finished frame, nothing pinned.
    -------------------------------------------------------------------------- */
 
 @media (prefers-reduced-motion: reduce) {
-  .hero__drift { animation: none; }
-
-  /* The stage keeps its 100vh box and simply renders the storyboard's final
-     frame — headline up, red culled, green tightened, copy and CTA in place.
-     Nothing is pinned, so the hero occupies exactly one viewport and the page
-     scrolls normally past it. */
-  .hero[data-motion='reduced'] .hero__stage {
-    min-height: 640px;
-  }
+  .hero__serp-caret { animation: none; opacity: 0; }
+  .hero[data-motion='reduced'] .hero__stage { min-height: 700px; }
+  .hero[data-motion='reduced'] .hero__serp-row.has-verdict { --verdict: 1; }
 }

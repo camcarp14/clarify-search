@@ -1,36 +1,20 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { SplitText } from 'gsap/SplitText'
 import { MOTION, MOBILE_QUERY, DESKTOP_QUERY } from './hero.motion'
-import { buildChips, subsetChips, layoutChips } from './heroChips'
+import { QUERY, ROWS, VERDICT_LABEL } from './heroSerp'
+import { counter as makeCounter, setIf } from '../../motion/system'
 import { DEBUG } from '../../lib/motionDebug'
 import './Hero.css'
 
 gsap.registerPlugin(ScrollTrigger, SplitText)
 
-const { chips: CHIPS, scatter, drift, seq, pin, counter } = MOTION
-
-/** Keep a tween inside its window once its stagger spread is accounted for. */
-const fit = (windowLen, staggerSpan, min = 0.04) =>
-  Math.max(windowLen - staggerSpan, min)
-
-/** gsap.set() on an empty array logs "GSAP target not found". That happens
- *  legitimately here — at the desktop breakpoint every chip is in play, so the
- *  parked list is empty — and a warning that fires on the happy path trains you
- *  to ignore the console. */
-const setIf = (targets, vars) => {
-  const list = Array.isArray(targets) ? targets.filter(Boolean) : targets
-  if (list && (!Array.isArray(list) || list.length)) gsap.set(list, vars)
-}
-
-/** The intro is wall-clock, so it uses a real ease rather than a scrub curve. */
-const EASE_INTRO = 'power3.out'
+const { seq, pin, intro, counter } = MOTION
 
 /** Framer Motion is scoped to component-level micro-interaction only — the
- *  scroll work is entirely GSAP's. Matches the press physics in
- *  saas-polish-system. */
+ *  scroll work is entirely GSAP's. */
 const PRESS = {
   whileHover: { y: -1 },
   whileTap: { scale: 0.97 },
@@ -40,17 +24,14 @@ const PRESS = {
 export default function Hero() {
   const rootRef = useRef(null)
   const stageRef = useRef(null)
-  const fieldRef = useRef(null)
   const headlineRef = useRef(null)
+  const panelRef = useRef(null)
+  const queryRef = useRef(null)
+  const caretRef = useRef(null)
+  const railRef = useRef(null)
   const counterRef = useRef(null)
   const counterLineRef = useRef(null)
   const resolveRef = useRef(null)
-
-  // Identity is built once. Coordinates are per-breakpoint, inside matchMedia.
-  const chips = useMemo(
-    () => buildChips({ count: CHIPS.desktopCount, scatter, drift }),
-    [],
-  )
 
   useEffect(() => {
     let mm = null
@@ -70,61 +51,20 @@ export default function Hero() {
         (ctx) => {
           const { isMobile, isReduced } = ctx.conditions
           const root = rootRef.current
-          const field = fieldRef.current
-          const byId = new Map(chips.map((c) => [c.id, c]))
-          const chipOf = (el) => byId.get(el.dataset.chipId)
+          const panel = panelRef.current
 
-          /* ---- which chips are in play at this breakpoint ---- */
-          const allSlots = gsap.utils.toArray('.hero__slot', field)
-          const activeChips = isMobile
-            ? subsetChips(chips, CHIPS.mobileCount)
-            : chips
-          const activeIds = new Set(activeChips.map((c) => c.id))
-          const slots = allSlots.filter((el) => activeIds.has(el.dataset.chipId))
-          const parked = allSlots.filter((el) => !activeIds.has(el.dataset.chipId))
+          const rowEls = gsap.utils.toArray('[data-row]', panel)
+          const byId = (id) => rowEls.find((el) => el.dataset.row === id)
+          const paidRow = byId('paid')
+          const ownedRow = byId('org1')
+          const leakRow = paidRow
 
-          setIf(parked, { display: 'none' })
-          setIf(slots, { display: '' })
-
-          /* ---- coordinates for this breakpoint ---- */
-          const cols = isMobile ? CHIPS.grid.mobileCols : CHIPS.grid.desktopCols
-          const coords = layoutChips(activeChips, {
-            cols,
-            bounds: isMobile ? CHIPS.bounds.mobile : CHIPS.bounds.desktop,
-            tight: isMobile ? CHIPS.tight.mobile : CHIPS.tight.desktop,
-          })
-
-          // Home slot is set with left/top ONCE, at layout time. Nothing
-          // animates it — the timeline only ever touches transform/opacity.
-          slots.forEach((el) => {
-            const c = coords.get(el.dataset.chipId)
-            gsap.set(el, {
-              left: `${c.homeX}%`,
-              top: `${c.homeY}%`,
-              xPercent: -50,
-              yPercent: -50,
-            })
-          })
-
-          /* ---- field size, re-measured on every refresh ---- */
-          let FW = 0
-          let FH = 0
-          const measure = () => {
-            const r = field.getBoundingClientRect()
-            FW = r.width
-            FH = r.height
-          }
-          measure()
-          ScrollTrigger.addEventListener('refreshInit', measure)
-
-          const deltaX = (el) => {
-            const c = coords.get(el.dataset.chipId)
-            return c.tightX === null ? 0 : ((c.tightX - c.homeX) / 100) * FW
-          }
-          const deltaY = (el) => {
-            const c = coords.get(el.dataset.chipId)
-            return c.tightY === null ? 0 : ((c.tightY - c.homeY) / 100) * FH
-          }
+          const marks = gsap.utils.toArray('[data-verdict]', panel)
+          const strike = panel.querySelector('[data-strike]')
+          const resolveItems = gsap.utils.toArray(
+            '[data-resolve-item]',
+            resolveRef.current,
+          )
 
           /* ---- headline lines ---- */
           const split = new SplitText(headlineRef.current, {
@@ -133,121 +73,109 @@ export default function Hero() {
             linesClass: 'hero__line',
           })
 
-          const codedFaces = slots.map((el) =>
-            el.querySelector('.hero__face--coded'),
-          )
-          const reds = slots.filter((el) => el.dataset.kind === 'waste')
-          const greens = slots.filter((el) => el.dataset.kind === 'convert')
-          const resolveItems = gsap.utils.toArray(
-            '[data-resolve-item]',
-            resolveRef.current,
-          )
+          /* ---- the query, split into characters for the type-on ---- */
+          const qSplit = new SplitText(queryRef.current, {
+            type: 'chars',
+            charsClass: 'hero__qchar',
+          })
 
+          const readout = makeCounter({
+            el: counterRef.current,
+            to: counter.to,
+            suffix: counter.suffix,
+          })
+
+          let detachMeasure = null
           const cleanup = () => {
-            ScrollTrigger.removeEventListener('refreshInit', measure)
             split.revert()
-            field.classList.remove('is-live')
+            qSplit.revert()
+            if (detachMeasure) detachMeasure()
+            root.classList.remove('is-live')
           }
 
           /* =================================================================
-           * REDUCED MOTION — everything resolves to its final state.
-           * No pin, no timeline, no Lenis (SmoothScroll skips it too).
+           * REDUCED MOTION — the finished frame, no pin, no timeline.
            * ================================================================= */
           if (isReduced) {
             root.dataset.motion = 'reduced'
-
-            setIf(codedFaces, { opacity: 1 })
-            setIf(reds, { display: 'none' })
-            setIf(greens, {
-              x: (i, el) => deltaX(el),
-              y: (i, el) => deltaY(el),
-              rotation: 0,
-              scale: 1,
-              opacity: 1,
-              filter: 'blur(0px)',
-            })
-            setIf([counterLineRef.current, ...resolveItems], {
-              opacity: 1,
-              y: 0,
-            })
-            if (counterRef.current) {
-              counterRef.current.textContent = `${counter.to}${counter.suffix}`
-            }
-
+            setIf(qSplit.chars, { opacity: 1 })
+            setIf(caretRef.current, { opacity: 0 })
+            setIf(marks, { opacity: 1, x: 0 })
+            setIf(railRef.current, { scaleY: 1 })
+            // The leak is shown already resolved: struck through and gone.
+            setIf(strike, { scaleX: 1 })
+            setIf(leakRow, { display: 'none' })
+            setIf([counterLineRef.current, ...resolveItems], { opacity: 1, y: 0 })
+            readout.set()
             return cleanup
           }
 
           /* =================================================================
-           * FULL MOTION — pinned, scrubbed storyboard.
+           * FULL MOTION
            * ================================================================= */
           root.dataset.motion = 'full'
           const pinVh = isMobile ? pin.mobileVh : pin.desktopVh
 
-          /* ================= INTRO — plays once, on load =================
-           * Wall-clock, not scrubbed. This is what the visitor sees before
-           * touching the wheel, and the whole reason it exists: the reveal used
-           * to live at progress 0.00-0.25 of the scrub, so the page landed with
-           * no headline over an out-of-focus field and read as broken.
-           *
-           * It writes the same properties the scrub later owns, so it must
-           * finish before the scrub's first beat can matter — which it does,
-           * because the scrub's opening tween is a no-op hold at progress 0. */
-          const eyebrow = root.querySelector('.hero__eyebrow')
-          const intro = gsap.timeline({ delay: MOTION.intro.startDelay })
-
-          intro.from(
-            split.lines,
-            {
-              yPercent: MOTION.intro.headlineFromYPercent,
-              duration: MOTION.intro.headlineDuration,
-              ease: EASE_INTRO,
-              stagger: MOTION.intro.headlineStagger,
-            },
-            0,
-          )
-          if (eyebrow) {
-            intro.from(
-              eyebrow,
-              {
-                opacity: 0,
-                y: 10,
-                duration: MOTION.intro.eyebrowDuration,
-                ease: EASE_INTRO,
-              },
-              0,
-            )
-          }
-          intro.from(
-            slots,
-            {
-              opacity: 0,
-              y: MOTION.intro.fieldFromY,
-              scale: MOTION.intro.fieldFromScale,
-              duration: MOTION.intro.fieldDuration,
-              ease: EASE_INTRO,
-              stagger: {
-                amount: MOTION.intro.fieldStagger * slots.length,
-                from: 'center',
-                grid: [Math.ceil(activeChips.length / cols), cols],
-              },
-            },
-            MOTION.intro.eyebrowDuration * 0.5,
-          )
-
-          // Resolve block starts hidden; its tweens are immediateRender:false
-          // so they must not be the thing that establishes the state.
+          // Everything the scrub or the intro animates starts explicitly set,
+          // so no tween has to infer a "from" off the stylesheet.
+          setIf(qSplit.chars, { opacity: 0 })
+          setIf(marks, { opacity: 0, x: seq.mark.labelFromX })
+          setIf(railRef.current, { scaleY: 0 })
+          setIf(strike, { scaleX: 0 })
           setIf([counterLineRef.current, ...resolveItems], {
             opacity: 0,
             y: seq.resolve.copyFromY,
           })
 
+          /* ---------------- INTRO — once, on load ---------------- */
+          const eyebrow = root.querySelector('.hero__eyebrow')
+          const tlIn = gsap.timeline({ delay: intro.startDelay })
+
+          tlIn.from(
+            split.lines,
+            {
+              yPercent: intro.headlineFromYPercent,
+              duration: intro.headlineDuration,
+              ease: intro.ease,
+              stagger: intro.headlineStagger,
+            },
+            0,
+          )
+          if (eyebrow) {
+            tlIn.from(
+              eyebrow,
+              { opacity: 0, y: 10, duration: intro.eyebrowDuration, ease: intro.ease },
+              0,
+            )
+          }
+          tlIn.from(
+            panel,
+            {
+              opacity: 0,
+              y: intro.panelFromY,
+              scale: intro.panelFromScale,
+              duration: intro.panelDuration,
+              ease: intro.ease,
+            },
+            intro.eyebrowDuration * 0.4,
+          )
+          tlIn.from(
+            rowEls,
+            {
+              opacity: 0,
+              y: intro.rowFromY,
+              duration: intro.rowDuration,
+              ease: intro.ease,
+              stagger: intro.rowStagger,
+            },
+            intro.eyebrowDuration * 0.4 + 0.25,
+          )
+
+          /* ---------------- SCRUB ---------------- */
           const tl = gsap.timeline({
             scrollTrigger: {
               trigger: root,
               start: 'top top',
-              // "%" in a ScrollTrigger end string is a share of the viewport
-              // height, so 250% === 250vh. Function form so it re-evaluates
-              // when the viewport is resized.
               end: () => `+=${pinVh}%`,
               pin: stageRef.current,
               pinSpacing: true,
@@ -255,162 +183,186 @@ export default function Hero() {
               anticipatePin: pin.anticipatePin,
               invalidateOnRefresh: true,
               markers: DEBUG,
-              onToggle: (self) =>
-                field.classList.toggle('is-live', self.isActive),
+              onToggle: (self) => root.classList.toggle('is-live', self.isActive),
             },
           })
 
-          // Normalises the timeline to exactly 1 unit long, so timeline time
-          // === scroll progress and the MOTION numbers read as the storyboard.
+          // Normalises the timeline to exactly 1 unit, so timeline time IS
+          // scroll progress and the numbers in hero.motion.js read as written.
           tl.to({}, { duration: 1 }, 0)
 
-          /* ---- the composed opening frame ----
-           * The headline and the ordered field are NOT scrubbed any more; the
-           * intro timeline below paints them on load. The scrub therefore
-           * starts from a page that already reads, and owns only the three
-           * beats that dramatise the product.
-           *
-           * This fromTo carries immediateRender (the default), so it is what
-           * establishes the chips' resting state at progress 0. Every tween
-           * after it must set immediateRender:false or it will stomp that. */
-          const co = seq.colour
-          tl.fromTo(
-            slots,
-            { x: 0, y: 0, rotation: 0, scale: 1, opacity: 1, filter: 'blur(0px)' },
-            { x: 0, y: 0, rotation: 0, scale: 1, opacity: 1, filter: 'blur(0px)', duration: 0.001 },
-            0,
-          )
-
-          // Idle drift amplitude falls away as the field commits to an answer.
+          /* ---- 0.00 → 0.22 · the query types in ---- */
+          const q = seq.query
           tl.to(
-            field,
-            {
-              '--drift-amp': 0,
-              duration: (co.end - co.start) * co.driftFadeEnd,
-              ease: 'none',
-              immediateRender: false,
-            },
-            co.start,
-          )
-
-          /* ---- 0.00 → 0.35 · colour-code, with a scale punch on the flip ---- */
-          const coDur = fit(co.end - co.start, co.staggerAmount)
-          const punchUp = coDur * co.punchSplit
-          const punchDown = coDur - punchUp
-
-          tl.fromTo(
-            codedFaces,
-            { opacity: 0 },
+            qSplit.chars,
             {
               opacity: 1,
-              duration: coDur,
-              ease: co.ease,
-              stagger: { amount: co.staggerAmount },
+              duration: 0.001,
+              ease: q.ease,
+              stagger: { amount: q.end - q.start },
               immediateRender: false,
             },
-            co.start,
+            q.start,
           )
-          tl.fromTo(
-            slots,
-            { scale: 1 },
-            {
-              scale: co.punchScale,
-              duration: punchUp,
-              ease: 'power2.out',
-              stagger: { amount: co.staggerAmount },
-              immediateRender: false,
-            },
-            co.start,
-          )
-          tl.fromTo(
-            slots,
-            { scale: co.punchScale },
-            {
-              scale: 1,
-              duration: punchDown,
-              ease: 'power2.inOut',
-              stagger: { amount: co.staggerAmount },
-              immediateRender: false,
-            },
-            co.start + punchUp,
+          tl.to(
+            caretRef.current,
+            { opacity: 0, duration: 0.04, immediateRender: false },
+            q.end,
           )
 
-          /* ---- 0.35 → 0.70 · waste falls out, survivors tighten to fill ---- */
-          const cu = seq.cull
-          tl.fromTo(
-            reds,
-            { y: 0, rotation: 0, opacity: 1 },
+          /* ---- 0.22 → 0.50 · mark the overlap ---- */
+          const mk = seq.mark
+          const markDur = Math.max(mk.end - mk.start - mk.stagger, 0.05)
+          tl.to(
+            [paidRow, ownedRow],
             {
-              y: () => (cu.fallDistance / 100) * FH,
-              rotation: (i, el) => chipOf(el).fallSign * cu.fallRotation,
-              opacity: 0,
-              duration: fit(cu.end - cu.start, cu.staggerAmount),
-              ease: cu.fallEase,
-              stagger: { amount: cu.staggerAmount },
+              '--verdict': 1,
+              duration: markDur,
+              ease: mk.ease,
+              stagger: mk.stagger,
+              immediateRender: false,
+            },
+            mk.start,
+          )
+          tl.to(
+            marks,
+            {
+              opacity: 1,
+              x: 0,
+              duration: markDur,
+              ease: mk.ease,
+              stagger: mk.stagger,
+              immediateRender: false,
+            },
+            mk.start,
+          )
+          tl.to(
+            railRef.current,
+            {
+              scaleY: 1,
+              duration: mk.railEnd - mk.railStart,
+              ease: mk.railEase,
+              immediateRender: false,
+            },
+            mk.railStart,
+          )
+
+          /* ---- 0.50 → 0.78 · strike the bought click, collapse it out ---- */
+          const cu = seq.cull
+          tl.to(
+            strike,
+            {
+              scaleX: 1,
+              duration: cu.strikeEnd - cu.start,
+              ease: cu.strikeEase,
               immediateRender: false,
             },
             cu.start,
           )
-          tl.fromTo(
-            greens,
-            { x: 0, y: 0 },
+          tl.to(
+            leakRow,
             {
-              x: (i, el) => deltaX(el),
-              y: (i, el) => deltaY(el),
-              duration: fit(
-                cu.end - cu.start - cu.tightenOffset,
-                cu.staggerAmount,
-              ),
-              ease: cu.tightenEase,
-              stagger: { amount: cu.staggerAmount },
+              opacity: 0,
+              x: cu.exitX,
+              duration: cu.end - cu.strikeEnd,
+              ease: cu.collapseEase,
               immediateRender: false,
             },
-            cu.start + cu.tightenOffset,
+            cu.strikeEnd,
+          )
+          // Closing the gap is a REFLOW OF THE ROWS BELOW, not a height tween
+          // on the row leaving. scaleY collapses the culled row visually but
+          // reclaims none of its space — it shipped leaving a white hole where
+          // the sponsored result had been. Sliding the survivors up by the
+          // culled row's measured height closes it for real, and stays
+          // transform-only so no frame triggers layout.
+          let leakH = leakRow.offsetHeight
+          const measureLeak = () => {
+            leakH = leakRow.offsetHeight
+          }
+          ScrollTrigger.addEventListener('refreshInit', measureLeak)
+          detachMeasure = () =>
+            ScrollTrigger.removeEventListener('refreshInit', measureLeak)
+          measureLeak()
+
+          const below = rowEls.slice(rowEls.indexOf(leakRow) + 1)
+          tl.to(
+            leakRow,
+            {
+              scaleY: 0,
+              transformOrigin: 'top center',
+              duration: cu.end - cu.strikeEnd,
+              ease: cu.reflowEase,
+              immediateRender: false,
+            },
+            cu.strikeEnd,
+          )
+          if (below.length) {
+            tl.to(
+              below,
+              {
+                y: () => -leakH,
+                duration: cu.end - cu.strikeEnd,
+                ease: cu.reflowEase,
+                immediateRender: false,
+              },
+              cu.strikeEnd,
+            )
+          }
+
+          // A DELIBERATE, SCOPED EXCEPTION to transform-and-opacity-only.
+          // The rows reflow by transform, but the panel is a box sized by three
+          // rows and keeps that height — leaving 103px of blank inside the card
+          // once one row leaves, which reads as a rendering bug rather than as
+          // a result being removed. Closing the container is the one case a
+          // height tween is the honest answer, and this is ONE element, so
+          // there is no layout storm: the rule exists to stop dozens of
+          // elements triggering layout per frame, not to ban a single box from
+          // ever resizing.
+          tl.to(
+            panel,
+            {
+              height: () => panel.offsetHeight - leakH,
+              duration: cu.end - cu.strikeEnd,
+              ease: cu.reflowEase,
+              immediateRender: false,
+            },
+            cu.strikeEnd,
+          )
+          tl.to(
+            railRef.current,
+            {
+              opacity: 0,
+              duration: (cu.end - cu.strikeEnd) * 0.5,
+              immediateRender: false,
+            },
+            cu.strikeEnd,
           )
 
-          /* ---- 0.70 → 1.00 · counter runs, copy lands, unpin ---- */
+          /* ---- 0.78 → 1.00 · counter, copy, unpin ---- */
           const rs = seq.resolve
-          const readout = { v: 0 }
-
-          tl.fromTo(
+          tl.to(
             counterLineRef.current,
-            { opacity: 0, y: rs.copyFromY },
-            {
-              opacity: 1,
-              y: 0,
-              duration: 0.04,
-              ease: rs.ease,
-              immediateRender: false,
-            },
+            { opacity: 1, y: 0, duration: 0.05, ease: rs.ease, immediateRender: false },
             rs.start,
           )
           tl.fromTo(
-            readout,
-            { v: 0 },
+            readout.readout,
+            readout.from,
             {
-              v: counter.to,
+              ...readout.to,
               duration: rs.counterEnd - rs.start,
               ease: rs.counterEase,
               immediateRender: false,
-              onUpdate: () => {
-                if (counterRef.current) {
-                  counterRef.current.textContent = `${Math.round(readout.v)}${counter.suffix}`
-                }
-              },
             },
             rs.start,
           )
-          tl.fromTo(
+          tl.to(
             resolveItems,
-            { opacity: 0, y: rs.copyFromY },
             {
               opacity: 1,
               y: 0,
-              duration: fit(
-                rs.end - rs.copyStart,
-                (resolveItems.length - 1) * rs.copyStaggerEach,
-                0.03,
-              ),
+              duration: Math.max(rs.end - rs.copyStart, 0.04),
               ease: rs.ease,
               stagger: rs.copyStaggerEach,
               immediateRender: false,
@@ -418,12 +370,7 @@ export default function Hero() {
             rs.copyStart,
           )
 
-          // Console handle while tuning:
-          //   window.__hero.st.progress  → where the scrub is
-          //   window.__hero.tl.progress(0.5)  → jump the storyboard
-          if (DEBUG) {
-            window.__hero = { tl, st: tl.scrollTrigger, slots, reds, greens }
-          }
+          if (DEBUG) window.__hero = { tl, tlIn, st: tl.scrollTrigger, rowEls }
 
           return cleanup
         },
@@ -444,43 +391,11 @@ export default function Hero() {
       cancelled = true
       if (mm) mm.revert()
     }
-  }, [chips])
+  }, [])
 
   return (
-    // id="top" is load-bearing: the header brand and the footer both link to
-    // #top, and it is the canonical URL's fragment.
     <section className="hero" id="top" ref={rootRef} aria-labelledby="heroTitle">
       <div className="hero__stage" ref={stageRef}>
-        <div className="hero__field" ref={fieldRef} aria-hidden="true">
-          {chips.map((c) => (
-            <div
-              className="hero__slot"
-              key={c.id}
-              data-chip-id={c.id}
-              data-kind={c.kind}
-            >
-              <div
-                className="hero__drift"
-                style={{
-                  '--drift-dur': `${c.driftDur}s`,
-                  '--drift-delay': `${c.driftDelay}s`,
-                  '--dx1': `${c.driftX1}px`,
-                  '--dy1': `${c.driftY1}px`,
-                  '--dr1': `${c.driftR1}deg`,
-                  '--dx2': `${c.driftX2}px`,
-                  '--dy2': `${c.driftY2}px`,
-                  '--dr2': `${c.driftR2}deg`,
-                }}
-              >
-                <span className="hero__chip">
-                  <span className="hero__face hero__face--neutral">{c.text}</span>
-                  <span className="hero__face hero__face--coded">{c.text}</span>
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-
         <div className="hero__content">
           <div className="hero__top">
             <span className="hero__eyebrow">
@@ -495,6 +410,79 @@ export default function Hero() {
               <em className="ital pay">buy</em> and the ones you{' '}
               <em className="ital earn">earn</em>.
             </h1>
+          </div>
+
+          {/* The artifact. aria-hidden because it is an illustration of a
+              results page, and every claim it makes is stated in the copy
+              around it. */}
+          <div className="hero__serp" ref={panelRef} aria-hidden="true">
+            <div className="hero__serp-bar">
+              <span className="hero__serp-dots">
+                <i />
+                <i />
+                <i />
+              </span>
+              <span className="hero__serp-omni">
+                <svg viewBox="0 0 16 16" width="11" height="11" aria-hidden="true">
+                  <circle
+                    cx="7"
+                    cy="7"
+                    r="4.5"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                  />
+                  <path
+                    d="M10.5 10.5 14 14"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <span className="hero__serp-query" ref={queryRef}>
+                  {QUERY}
+                </span>
+                <span className="hero__serp-caret" ref={caretRef} />
+              </span>
+            </div>
+
+            <div className="hero__serp-rows">
+              {/* The rail linking the click you bought to the one you owned. */}
+              <span className="hero__serp-rail" ref={railRef} />
+
+              {ROWS.map((r) => (
+                <div
+                  key={r.id}
+                  className={`hero__serp-row is-${r.kind}${
+                    r.verdict ? ` has-verdict is-${r.verdict}` : ''
+                  }`}
+                  data-row={r.id}
+                >
+                  <span className="hero__serp-tag">
+                    {r.tag}
+                    {r.badge ? <em className="hero__serp-badge">{r.badge}</em> : null}
+                  </span>
+
+                  {r.url ? <span className="hero__serp-url">{r.url}</span> : null}
+
+                  <span className="hero__serp-title">
+                    {r.title}
+                    {r.trailing ? (
+                      <span className="hero__serp-trailing"> {r.trailing}</span>
+                    ) : null}
+                    {r.leak ? <span className="hero__serp-strike" data-strike /> : null}
+                  </span>
+
+                  {r.note ? <span className="hero__serp-note">{r.note}</span> : null}
+
+                  {r.verdict ? (
+                    <span className="hero__serp-verdict" data-verdict>
+                      {VERDICT_LABEL[r.verdict]}
+                    </span>
+                  ) : null}
+                </div>
+              ))}
+            </div>
           </div>
 
           <div className="hero__resolve" ref={resolveRef}>

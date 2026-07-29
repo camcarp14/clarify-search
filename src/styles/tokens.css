@@ -4,23 +4,26 @@
 :root {
   color-scheme: light;
 
-  --bg: #f5f1e8;
-  --bg-2: #ece4d6;
+  --bg: #f6f2ea;
+  --bg-2: #e9dfcc;
   --panel: #fffdf8;
   --surface: rgba(255, 255, 255, .70);
   --surface-strong: rgba(255, 253, 248, .96);
   --line: rgba(47, 40, 30, .14);
   --line-strong: rgba(47, 40, 30, .26);
-  --ink: #211c16;
-  --muted: #6a6053;
-  --muted-2: #948a7b;
+  --ink: #17120c;
+  --muted: #625848;
+  /* 4.89:1 on --bg. The previous #948a7b measured 3.47:1, and this token is
+     used for the small uppercase mono labels that head every section — real
+     text, not decoration, so it needs AA. */
+  --muted-2: #736858;
   --tint-rgb: 47, 40, 30;
 
-  --amber: #bd7a12;
-  --amber-soft: #8f5a09;
+  --amber: #c67908;
+  --amber-soft: #8a5406;
   --amber-rgb: 189, 122, 18;
-  --mint: #2c9564;
-  --mint-soft: #1b6b45;
+  --mint: #1f9560;
+  --mint-soft: #146b41;
   --mint-rgb: 44, 149, 100;
   --blue: #3a6bcc;
   --blue-soft: #2a4e9b;
@@ -28,7 +31,7 @@
   --iris: #6a59db;
   --iris-soft: #4a3cae;
   --iris-rgb: 106, 89, 219;
-  --red: #b8382b;
+  --red: #b32d1f;
   --red-rgb: 184, 56, 43;
 
   --max: 1200px;
@@ -38,6 +41,18 @@
   --font-serif: "Instrument Serif", Georgia, serif;
   --font-body: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* ELEVATION. One warm-tinted ramp, so a card, a panel and a lifted mock all
+     sit in the same light. Neutral-grey shadows on warm paper read as dirt;
+     these are tinted with --tint-rgb so they read as shade. */
+  --lift-1: 0 1px 2px rgba(var(--tint-rgb), .06),
+            0 2px 6px rgba(var(--tint-rgb), .05);
+  --lift-2: 0 2px 4px rgba(var(--tint-rgb), .06),
+            0 8px 20px rgba(var(--tint-rgb), .08);
+  --lift-3: 0 4px 8px rgba(var(--tint-rgb), .07),
+            0 18px 44px rgba(var(--tint-rgb), .12);
+  --lift-4: 0 8px 16px rgba(var(--tint-rgb), .08),
+            0 34px 80px rgba(var(--tint-rgb), .16);
 
   --e-out: cubic-bezier(.16, 1, .3, 1);
   --e-spring: cubic-bezier(.34, 1.3, .34, 1);

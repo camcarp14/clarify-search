@@ -14,6 +14,7 @@ import {
   scrubbedTrigger,
   setIf,
 } from '../../motion/system.js'
+import MethodArtifact from './MethodArtifact.jsx'
 import { MOTION } from './method.motion.js'
 import { DEBUG } from '../../lib/motionDebug.js'
 import './Method.css'
@@ -478,6 +479,11 @@ export default function Method() {
                     h2 (section) → h3 (step). Do not promote or demote. */}
                 <h3 data-step-copy>{s.title}</h3>
                 <p data-step-copy>{s.body}</p>
+
+                {/* The artifact itself, drawn. The section promises "every one
+                    leaves an artifact" and used to name four without showing
+                    one, which is why the cards read as four boxes of prose. */}
+                <MethodArtifact step={s.n} />
 
                 <div className="method__artifact" data-artifact>
                   {/* ACCESSIBILITY FIX (see Method.css §5): legacy ships this

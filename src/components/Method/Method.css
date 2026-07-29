@@ -401,3 +401,169 @@
     font-size: 9.5px;
   }
 }
+
+/* ==========================================================================
+   7. THE ARTIFACTS
+
+   Each step draws the thing it hands you. Schematic, not screenshot-real:
+   these sit at ~110px and have to read at a glance, and a shrunken real
+   screenshot at that size is mush. All CSS boxes and inline SVG — nothing to
+   load — and every colour comes from the shared tokens so they age with the
+   palette.
+
+   The pieces marked [data-art-part] are staggered in by the section's scrub;
+   nothing in here animates itself.
+   ========================================================================== */
+
+/* Pushed to the bottom of the card. The four bodies are different lengths, so
+   without this the artifacts sit at four different heights and the row stops
+   reading as one system. */
+.method__art {
+  margin-top: auto;
+  /* A common height so the four boxes line up across the row. Bottom-aligning
+     alone was not enough: the checklist is three rows and the roadmap is one,
+     so their tops still landed 70px apart. */
+  min-height: 104px;
+  display: grid;
+  align-content: center;
+  padding: 12px 13px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(var(--tint-rgb), .03), transparent 70%), var(--bg);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .5);
+}
+
+.mart { display: grid; gap: 7px; }
+
+/* ---- 01 · access checklist ---- */
+.mart--check li {
+  display: grid;
+  /* minmax(0,1fr), not 1fr: a bare 1fr floors at the label's min-content
+     width, so "Search Console" + "VIEWER" in mono forced the card wider than a
+     390px screen and pushed the whole document to 397. */
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--muted);
+}
+.mart__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mart__tick {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  color: var(--mint-soft);
+  background: rgba(var(--mint-rgb), .14);
+  border: 1px solid rgba(var(--mint-rgb), .3);
+}
+.mart__scope {
+  font-size: 8.5px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+
+/* ---- 02 · scorecard ---- */
+.mart--score {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 12px;
+}
+.mart__ring { position: relative; display: grid; place-items: center; }
+.mart__ring-fill {
+  /* 2πr = 113.1. 72% of it, so the arc reads as the 72 in the middle. */
+  stroke-dasharray: 113.1;
+  stroke-dashoffset: 31.7;
+}
+.mart__ring-num {
+  position: absolute;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.mart__bars { display: grid; gap: 6px; }
+.mart__bar { display: grid; gap: 3px; }
+.mart__bar-k {
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+.mart__bar-track {
+  display: block;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(var(--tint-rgb), .1);
+  overflow: hidden;
+}
+.mart__bar-fill {
+  display: block;
+  height: 100%;
+  width: var(--w, 50%);
+  border-radius: 999px;
+}
+.mart__bar-fill.is-fair { background: var(--amber); }
+.mart__bar-fill.is-poor { background: var(--red); }
+
+/* ---- 03 · change log ---- */
+.mart--diff li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: baseline;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--muted);
+  padding: 3px 6px;
+  border-radius: 5px;
+}
+.mart--diff li.is-cut { background: rgba(var(--red-rgb), .07); }
+.mart--diff li.is-add { background: rgba(var(--mint-rgb), .09); }
+.mart__sign { font-weight: 700; }
+.mart--diff li.is-cut .mart__sign { color: var(--red); }
+.mart--diff li.is-add .mart__sign { color: var(--mint-soft); }
+
+/* ---- 04 · roadmap ---- */
+.mart--road { gap: 6px; }
+.mart__road-track { display: flex; gap: 3px; }
+.mart__road-seg {
+  display: block;
+  width: var(--w, 33%);
+  height: 8px;
+  border-radius: 3px;
+  /* Each phase a step further along the amber-to-mint ramp: the work starts
+     as spend triage and ends as earned position. */
+  background: color-mix(in srgb, var(--amber), var(--mint) calc(var(--i) * 45%));
+  opacity: calc(.55 + var(--i) * .22);
+}
+.mart__road-keys {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  letter-spacing: .08em;
+  color: var(--muted-2);
+}
+
+/* The artifact label under the box wraps to two lines on some steps and one on
+   others, which shifts the box above it. Reserve the taller of the two. */
+.method__artifact { min-height: 3.2em; }
+
+@media (max-width: 1080px) {
+  .method__art { min-height: 96px; padding: 10px 11px; }
+  .mart--check li, .mart--diff li { font-size: 9px; gap: 6px; }
+  .mart--score { gap: 9px; }
+  .method__artifact { min-height: 0; }
+}

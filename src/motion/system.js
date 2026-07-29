@@ -354,12 +354,27 @@ export const PIN = {
  * 0.6 keeps the smoothing without the drag. Pins keep 1 because the page is
  * frozen underneath them.
  */
+/**
+ * BOTH EDGES ARE MEASURED FROM THE SECTION'S TOP, on purpose.
+ *
+ * The first version ended at 'bottom 55%', which makes the window length depend
+ * on how tall the section is. For the 854px Method section in a 1000px viewport
+ * that put progress 1 at the moment its top sat 304px ABOVE the viewport — so
+ * the last of four staggered cards finished revealing as the section scrolled
+ * away, and a reader going at a normal pace saw empty cards. Measured: at the
+ * moment the section's top reached the viewport top, card 04's children were
+ * still at opacity 0.55 / 0.16 / 0.16 / 0.
+ *
+ * Anchoring both edges to the top makes the window a fixed 65% of a viewport of
+ * scroll whatever the section's height, so a four-card row and a nine-row FAQ
+ * reveal at the same rate, and everything has landed while the section is still
+ * prominently in view.
+ */
 export const SCRUB_WINDOW = {
-  desktop: { start: 'top 85%', end: 'bottom 55%' },
-  /** Mobile sections are much taller (everything stacks), so a
-   *  'bottom 55%' end can be two viewports of scroll away from the start and
-   *  the gesture becomes imperceptible per notch. Start later, end earlier. */
-  mobile: { start: 'top 92%', end: 'bottom 70%' },
+  desktop: { start: 'top 90%', end: 'top 25%' },
+  /** Mobile sections are far taller because everything stacks, and a thumb
+   *  covers more screen per gesture — so the window is shorter still. */
+  mobile: { start: 'top 94%', end: 'top 40%' },
   scrub: 0.6,
 }
 

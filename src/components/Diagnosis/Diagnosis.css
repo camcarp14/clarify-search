@@ -33,18 +33,6 @@ section.band.diagnosis {
   border-top: 0;
 }
 
-/* The retired legacy reveal system still ships in components.css §10, and its
-   `.section-head h2` rule clips every section head to zero height until a
-   `.reveal.in` ancestor appears. This section never adds that class — the
-   heading is a scrubbed SplitText mask rise instead (§0.1, §A.6) — so without
-   this override the H2 renders permanently invisible. (0,2,1) beats (0,1,1),
-   and this file loads after components.css because the component imports it.
-   Delete this the day components.css §10 goes away. */
-.diagnosis .section-head h2 {
-  clip-path: none;
-  transition: none;
-}
-
 /* SplitText writes `overflow: clip` inline on the mask wrappers; these are the
    display + descender allowances, same shape as Hero.css. */
 .diagnosis__line {
@@ -68,12 +56,13 @@ section.band.diagnosis {
 .diagnosis__onepage {
   /* Plain inline. No relative/absolute stacking, no nowrap: there is nothing
      left that could be split away from a positioned parent. */
+
+  /* Progress 0: the phrase is muted, and --muted is 5.46:1 on the bone ground —
+     so the un-animated state is readable on its own, which is also the state a
+     prerendered or JS-disabled page shows. */
   color: var(--muted);
 }
 
-/* Progress 0: the phrase is muted. --muted is 5.46:1 on the bone ground, so
-   the un-animated state is readable on its own (it is also the state a no-JS
-   or pre-hydration render shows). */
 /* --------------------------------------------------------------------------
    2. PAIN GRID  (legacy 606-615)
 
@@ -137,14 +126,23 @@ section.band.diagnosis {
   transition: color 0.25s ease;
 }
 
+/* PALETTE FIX, second pass. `#13141b` is a BLUE-black (hue 232°) and the rest
+   of the page is warm paper over espresso ink — against bone at #f6f2ea it read
+   as a slab from another site rather than the same card going dark. It is now
+   `--ink-deep`: the same hue family as --ink (#17120c), two steps below it, so
+   the hover is the card dimming rather than a foreign object landing on it.
+
+   Contrast is unchanged in kind and slightly better in fact: #f7f3ea on
+   #0e0a05 is ~18.6:1, and the body copy at .74 alpha lands near 10:1 — both
+   well past the 4.5:1 the legacy hover was failing at 1.1:1. */
 .diagnosis__pain:hover {
-  background: #13141b;
+  background: var(--ink-deep);
 }
 .diagnosis__pain:hover h3 {
-  color: #f5f1e8;
+  color: #f7f3ea;
 }
 .diagnosis__pain:hover p {
-  color: rgba(245, 241, 232, 0.72);
+  color: rgba(247, 243, 234, 0.74);
 }
 
 /* --------------------------------------------------------------------------

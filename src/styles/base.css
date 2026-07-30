@@ -30,6 +30,43 @@ body {
   overflow-x: hidden;
 }
 
+/* ---------------------------------------------------------------------------
+   THE COLUMN RULES
+
+   Two fixed hairlines on the shell's edges, running the full viewport height
+   behind everything. The shell is `min(1200px, 100% - 2*var(--pad))` and these
+   read the same expression, so they track it through every breakpoint without
+   a second source of truth.
+
+   They exist because the page is 1200px of content inside a 2560px window, and
+   without them that outer margin reads as the page having run out rather than
+   as a margin. One `position: fixed` element with a static gradient: painted
+   once, never during scroll, and no scroll listener.
+
+   `html::before`, not `body::before`. body owns the page background, and a
+   background on body (with none on html) propagates to the canvas and paints
+   below every negative-z-index box — so `z-index: -1` here lands above the
+   paper and below all content. On body::before it would need a positive
+   z-index and would then sit on top of the sections.
+
+   Below 1080px the gutters are 40/20px and a rule that close to the text edge
+   reads as a border, so it is desktop-only. --pad is a plain px value at every
+   breakpoint, which is what lets these be one calc rather than a media ladder. */
+@media (min-width: 1080px) {
+  html::before {
+    content: '';
+    position: fixed;
+    z-index: -1;
+    top: 0;
+    bottom: 0;
+    left: max(var(--pad), calc(50% - var(--max) / 2));
+    right: max(var(--pad), calc(50% - var(--max) / 2));
+    pointer-events: none;
+    border-left: 1px solid rgba(var(--tint-rgb), .07);
+    border-right: 1px solid rgba(var(--tint-rgb), .07);
+  }
+}
+
 h1, h2, h3 {
   font-family: var(--font-display);
   font-weight: 700;

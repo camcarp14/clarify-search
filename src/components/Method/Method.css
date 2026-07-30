@@ -49,18 +49,6 @@
    0. SECTION FRAME
    -------------------------------------------------------------------------- */
 
-/* The retired legacy reveal system still ships in components.css §10, and its
-   `.section-head h2` rule clips every section head to zero height until a
-   `.reveal.in` ancestor appears. This section never adds that class — the
-   heading is a scrubbed SplitText mask rise instead (§0.1, §A.6) — so without
-   this override the H2 renders permanently invisible. (0,2,1) beats (0,1,1),
-   and this file loads after components.css because the component imports it.
-   Delete this the day components.css §10 goes away. */
-.method .section-head h2 {
-  clip-path: none;
-  transition: none;
-}
-
 /* SplitText writes `overflow: clip` inline on the mask wrappers, so no overflow
    is declared here; these are the display + descender allowances only. Same
    shape as Diagnosis.css. */

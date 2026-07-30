@@ -12,6 +12,10 @@
   --line: rgba(47, 40, 30, .14);
   --line-strong: rgba(47, 40, 30, .26);
   --ink: #17120c;
+  /* Two steps below --ink, same warm hue family. For the places that need a
+     near-black SURFACE rather than near-black text: the pain card's hover, and
+     anything else that has to go dark without leaving the page's palette. */
+  --ink-deep: #0e0a05;
   --muted: #625848;
   /* 4.89:1 on --bg. The previous #948a7b measured 3.47:1, and this token is
      used for the small uppercase mono labels that head every section — real

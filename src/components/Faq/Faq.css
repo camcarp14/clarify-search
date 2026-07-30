@@ -41,6 +41,22 @@
 .faq__list {
   display: grid;
   gap: 12px;
+  /* Feeds the per-row ordinal below. Reset on the list, incremented on the
+     item, so the numbering is a property of position and there is no index
+     threaded through JSX. */
+  counter-reset: faq;
+}
+
+/* The heading column is ~200px against a 748px list, so it left ~550px of blank
+   paper. Sticky spends it: the question "straight answers before you send
+   access" stays in view while the reader works down the answers. Travel is
+   bounded by .faq__grid's height. Single-column below 900px, where it would
+   ride over the list instead. */
+@media (min-width: 900px) {
+  .faq__lede {
+    position: sticky;
+    top: calc(var(--nav-h) + 56px);
+  }
 }
 
 /* --------------------------------------------------------------------------
@@ -60,6 +76,7 @@
   background: var(--surface);
   padding: 0 22px;
   transition: border-color var(--faq-border-dur, 250ms) ease;
+  counter-increment: faq;
 }
 
 .faq__summary {
@@ -78,6 +95,43 @@
 
 .faq__summary::-webkit-details-marker {
   display: none;
+}
+
+/* The ordinal. Nine identical rounded rectangles read as an undifferentiated
+   stack; numbered they read as an index, which is what the section is.
+
+   A CSS counter rather than a prop, and a pseudo-element rather than a <span>:
+   the number is positional decoration, it is not part of the question, and
+   <summary> is what assistive tech announces — generated content on a
+   ::before is not in the accessibility tree, so the announced label stays
+   exactly the nine verbatim question strings with nothing prepended.
+
+   Sits inside the existing flex row as the first item; --muted-2 is the same
+   token the chevron uses, and like the chevron it is non-text UI. */
+.faq__summary::before {
+  content: counter(faq, decimal-leading-zero);
+  flex: 0 0 auto;
+  align-self: flex-start;
+  margin-top: 1px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: .08em;
+  color: var(--muted-2);
+  transition: color var(--faq-border-dur, 250ms) ease;
+}
+
+/* The open row's ordinal takes the accent, so the number is a second channel
+   for the same state the chevron and the native semantics already carry. */
+.faq__item--open .faq__summary::before {
+  color: var(--amber-soft);
+}
+
+/* The question is the flex child that should absorb the free space; without
+   this the ordinal's arrival pushes `justify-content: space-between` into
+   distributing the gap between THREE items and the chevron drifts inward. */
+.faq__question {
+  flex: 1 1 auto;
 }
 
 /* The chevron. An 8x8 box with only its right and bottom borders, rotated 45deg

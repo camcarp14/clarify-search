@@ -21,29 +21,6 @@
    ========================================================================== */
 
 /* --------------------------------------------------------------------------
-   0. RETIRING THE LEGACY REVEAL WIPE
-
-   components.css §10 still carries the old IntersectionObserver reveal system,
-   and one of its rules is section-specific to us:
-
-       .section-head h2, .contact-copy h2 { clip-path: inset(0 0 106% 0); }
-       .reveal.in h2                      { clip-path: inset(0 0 -20% 0); }
-
-   That heading is only ever un-clipped by `.reveal.in`, and `.reveal` is
-   retired (§0.1) — this section does not carry it. Left alone, the <h2> would
-   be clipped to nothing forever. It also has to go on its own merits: the
-   replacement for that wipe is the SplitText masked line rise (§A.6), and a
-   clip-path on the <h2> would clip the per-line masks that gesture depends on.
-
-   Specificity (0,2,1) so this wins regardless of stylesheet order.
-   -------------------------------------------------------------------------- */
-
-.contact .contact-copy h2 {
-  clip-path: none;
-  transition: none;
-}
-
-/* --------------------------------------------------------------------------
    1. GRID  (legacy 1335–1337)
    -------------------------------------------------------------------------- */
 
@@ -57,6 +34,21 @@
 .contact .contact-copy {
   display: grid;
   gap: 18px;
+  align-content: start;
+}
+
+/* The copy column measures 426px against a 757px form, so it used to leave
+   331px of blank paper under the email link — the largest single void on the
+   page. Sticky spends that gap instead of leaving it: the ask stays beside the
+   field the reader is filling in.
+   Travel is bounded by the grid container's own height, so it cannot escape the
+   section. Not applied below 900px, where the grid is one column and a sticky
+   heading would ride over the form. */
+@media (min-width: 900px) {
+  .contact .contact-copy {
+    position: sticky;
+    top: calc(var(--nav-h) + 56px);
+  }
 }
 
 .contact .contact-copy h2 {
@@ -88,9 +80,34 @@
 }
 
 .contact .next-steps li {
+  position: relative;
   display: flex;
   gap: 14px;
   align-items: flex-start;
+}
+
+/* The spine. Three numbered circles floating in space read as three unrelated
+   badges; joined by a hairline they read as one sequence, which is what the
+   copy says they are.
+
+   Drawn per-item rather than once down the whole list on purpose: the last step
+   can wrap to two lines, so a single `top: 13px; bottom: 13px` rule on the list
+   would overshoot past the final numeral by a line height. Each segment instead
+   spans from under its own numeral to the top of the next one — 30px clears the
+   26px circle, and the +16px picks up the list's `gap`. The last item draws
+   nothing, so the sequence ends on a numeral at any wrap. */
+.contact .next-steps li:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 13px;
+  top: 30px;
+  width: 1px;
+  height: calc(100% - 14px);
+  background: linear-gradient(
+    180deg,
+    rgba(var(--mint-rgb), .40),
+    rgba(var(--mint-rgb), .12)
+  );
 }
 
 /* The numeral. `position: relative` and a transparent border are the only

@@ -57,18 +57,6 @@ section.band#ai-visibility {
    SECTION HEAD
    -------------------------------------------------------------------------- */
 
-/* components.css §10 still ships the legacy reveal system, and its
-   `.section-head h2 { clip-path: inset(0 0 106% 0) }` is UNCONDITIONAL — the
-   heading is clipped to nothing until a `.reveal.in` ancestor opens it. This
-   section is on the GSAP path and never gets that class, so without this
-   override the h2 would be invisible forever. The mask here is SplitText's,
-   which is a transform inside an overflow:hidden wrapper — no clip-path, no
-   CSS transition, nothing for the scrub to fight. */
-#ai-visibility .section-head h2 {
-  clip-path: none;
-  transition: none;
-}
-
 /* legacy 682-683. */
 #ai-visibility .mono-label { color: var(--iris-soft); }
 #ai-visibility h2 .ital { color: var(--iris-soft); }

@@ -61,17 +61,55 @@
 .why-cards {
   display: grid;
   gap: 16px;
+  /* Two cards of copy measured 284px against a 354px copy column, leaving 70px
+     of blank paper below them. Equal fractions let them stretch to close it, so
+     the two columns end on the same line — which is what `align-items: start`
+     on .why-grid was always trying to say.
+     `grid-auto-rows: 1fr` and NOT `align-self: stretch` on the column. In an
+     auto-height grid a `1fr` row resolves to the tallest row's content, so the
+     two cards match each other — the two-line card grows to the three-line
+     card's height, which is what the level bottom edge needs. Stretching the
+     COLUMN to the copy column's full height as well was the first attempt and
+     it was worse: the extra 70px all landed inside the short card as a hole
+     under its paragraph. Matching the cards to each other closes most of the
+     gap and leaves none of it visible.
+     Counter for the ordinals below. */
+  grid-auto-rows: 1fr;
+  counter-reset: whycard;
 }
 
 .why-card {
   display: grid;
   gap: 8px;
   padding: 24px 28px;
+  /* Own row rather than align-content:center — the heading should sit at the
+     top of the card and the slack should fall under the paragraph. */
+  align-content: start;
+  counter-increment: whycard;
 }
 
+/* The ordinal, in the h3's own row so it costs no vertical space.
+   `position: relative` would break the deck's stacking order (see the z-index
+   note below, which relies on these being unpositioned grid items), so the
+   numeral is placed with the h3's grid rather than absolutely. */
 .why-card h3 {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  gap: 14px;
   font-size: 18px;
   letter-spacing: -0.01em;
+}
+
+/* Generated content on ::after is outside the accessibility tree, so the two
+   card headings still announce exactly the verbatim strings from whyData.js. */
+.why-card h3::after {
+  content: counter(whycard, decimal-leading-zero);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: .1em;
+  color: var(--muted-2);
 }
 
 .why-card p {

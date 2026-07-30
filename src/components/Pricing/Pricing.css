@@ -42,21 +42,6 @@
    ========================================================================== */
 
 /* --------------------------------------------------------------------------
-   0. UNDOING THE RETIRED REVEAL SYSTEM
-
-   components.css §10 sets `.section-head h2 { clip-path: inset(0 0 106% 0) }`
-   and only ever opens it again via a class this section does not use. Without
-   this override the H2 would be clipped to nothing for the entire life of the
-   page and the SplitText masks would animate inside an invisible box. Highest-
-   value rule in the file.
-   -------------------------------------------------------------------------- */
-
-.pricing .section-head h2 {
-  clip-path: none;
-  transition: none;
-}
-
-/* --------------------------------------------------------------------------
    1. CHANNEL THEMING
 
    Three custom properties inherit down the whole subtree and everything that

@@ -31,21 +31,6 @@
    ========================================================================== */
 
 /* --------------------------------------------------------------------------
-   0. UNDOING THE RETIRED REVEAL SYSTEM
-
-   components.css §10 sets `.section-head h2 { clip-path: inset(0 0 106% 0) }`
-   and only ever opens it again via `.reveal.in h2`. This section does not use
-   `.reveal`, so without this override the H2 would be clipped to nothing for
-   the entire life of the page and the SplitText masks would animate inside an
-   invisible box. This is the single highest-value rule in the file.
-   -------------------------------------------------------------------------- */
-
-.coverage .section-head h2 {
-  clip-path: none;
-  transition: none;
-}
-
-/* --------------------------------------------------------------------------
    1. GRID
    The 218px middle column is a fixed spine width; the two panels split the
    remainder. `align-items: stretch` keeps both panels the same height whatever
@@ -57,6 +42,21 @@
   grid-template-columns: 1fr 218px 1fr;
   gap: 20px;
   align-items: stretch;
+}
+
+/* CONTAINS THE CONVERGE GESTURE.
+   The two panels enter from ∓TRAVEL.converge — 72px on desktop, measured out
+   from their final position. From 1240px down --pad drops to 40px, so at a
+   1200-1240px window the right panel's start position sits 32px past the
+   viewport and the document's scrollable width grows to 1232.
+   `overflow-x: clip` and NOT `hidden`: clip does not create a scroll container,
+   so it cannot swallow a `position: sticky` descendant or add a scroll port
+   that ScrollTrigger would then have to reason about. It only clips.
+   This was previously masked by `body { overflow-x: hidden }` — which meant no
+   visible scrollbar, but the clip lived three levels up from the thing that
+   needed it and the section measured 32px wider than the page at those widths. */
+.coverage {
+  overflow-x: clip;
 }
 
 /* --------------------------------------------------------------------------

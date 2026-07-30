@@ -112,18 +112,6 @@ section.band#ai-build {
   padding: 20px 26px;
 }
 
-/* SHARED. components.css §10 still ships the legacy reveal system, and its
-   `.section-head h2 { clip-path: inset(0 0 106% 0) }` is UNCONDITIONAL — the
-   heading is clipped to nothing until a `.reveal.in` ancestor opens it. This
-   section is on the GSAP path and never gets that class, so without the
-   override the h2 would be invisible forever. The mask here is SplitText's,
-   which is a transform inside an overflow:hidden wrapper — no clip-path, no
-   CSS transition, nothing for the scrub to fight. */
-#ai-build .section-head h2 {
-  clip-path: none;
-  transition: none;
-}
-
 /* SplitText writes overflow:hidden inline on its mask wrappers; these are
    belt-and-braces plus the padding that stops a descender being shaved by the
    mask edge. Same pair as Hero.css's `.hero__line`. */

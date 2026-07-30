@@ -42,10 +42,19 @@ export const MOTION = {
    * units so the storyboard reads unchanged — this number is the only thing
    * that converts it to wall clock.
    *
-   * 3.4s: long enough that four beats are legible, short enough that the CTA
-   * is not withheld. The counter and copy land at 0.78 of it, so roughly 2.7s.
+   * 5.6s, up from 3.4. At 3.4 the four beats each got ~0.8s and the whole thing
+   * was over before a visitor had finished reading the headline — the reported
+   * experience was "the animation moves so quickly, and if you didn't catch it
+   * right away you'll be confused as to what you're looking at". 5.6 gives the
+   * query ~1.2s to type, the marks ~1.6s to land and the strike ~0.7s to wipe,
+   * which is the pace of something being demonstrated rather than flashed.
+   *
+   * The other half of that fix is not a duration: the resting frame now holds
+   * the whole argument on its own (see `cull` below), so missing the animation
+   * costs a visitor nothing. A replay control sits under the panel for anyone
+   * who wants to watch it again.
    */
-  sequenceSeconds: 3.4,
+  sequenceSeconds: 5.6,
 
   /* --------------------------------------------------------------------- */
   /* INTRO — plays once, on load. Wall-clock seconds.                       */
@@ -97,18 +106,36 @@ export const MOTION = {
       railEase: 'power2.inOut',
     },
 
-    /** 0.50 → 0.78 — the bought click is struck through and collapses out.
-     *  The rows below reflow up to close the gap. */
+    /** 0.50 → 0.78 — the bought click is struck through and DIMMED IN PLACE.
+     *
+     *  It used to collapse out of the panel entirely: strike, slide left, fade,
+     *  scaleY to 0, the rows below slide up by its measured height, and the panel
+     *  itself height-tween down to close the gap.
+     *
+     *  That was the wrong ending. Deleting the row deletes the evidence — the
+     *  resting frame was left showing an AI answer and a #1 organic result, with
+     *  no trace of the sponsored click that the entire page is about. Anyone who
+     *  arrived a second late, or scrolled straight past, saw a results page with
+     *  nothing wrong with it. "You paid for this click" struck through, sitting
+     *  directly above "You already ranked #1 for it", IS the argument, and it
+     *  only works if both rows are still there.
+     *
+     *  Keeping the row also deleted a pile of machinery: the offsetHeight
+     *  measurement and its refreshInit listener, the reflow of the rows below,
+     *  and the documented height-tween exception on the panel. Nothing measures
+     *  anything here now.
+     */
     cull: {
       start: 0.5,
       end: 0.78,
-      /** The strike-through wipes across before the row goes. */
-      strikeEnd: 0.62,
+      /** The strike-through wipes across, then the row settles back. */
+      strikeEnd: 0.66,
       strikeEase: 'power2.inOut',
-      collapseEase: 'power3.inOut',
-      /** How far the culled row slides out as it goes, px. */
-      exitX: -40,
-      reflowEase: 'power3.inOut',
+      dimEase: 'power2.out',
+      /** Where the struck row rests. Low enough to read as spent, high enough
+       *  that the strike, the tag and the verdict are all still legible — this
+       *  row has to carry the argument in the still frame. */
+      dimOpacity: 0.52,
     },
 
     /** 0.78 → 1.00 — the counter runs, subhead and CTA land, then unpin. */

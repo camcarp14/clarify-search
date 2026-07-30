@@ -31,6 +31,7 @@ export default function Hero() {
   const railRef = useRef(null)
   const counterRef = useRef(null)
   const counterLineRef = useRef(null)
+  const replayRef = useRef(null)
   const resolveRef = useRef(null)
 
   useEffect(() => {
@@ -85,11 +86,11 @@ export default function Hero() {
             suffix: counter.suffix,
           })
 
-          let detachMeasure = null
+          let detachReplay = null
           const cleanup = () => {
             split.revert()
             qSplit.revert()
-            if (detachMeasure) detachMeasure()
+            if (detachReplay) detachReplay()
             root.classList.remove('is-live')
           }
 
@@ -102,11 +103,16 @@ export default function Hero() {
             setIf(caretRef.current, { opacity: 0 })
             setIf(marks, { opacity: 1, x: 0 })
             setIf(railRef.current, { scaleY: 1 })
-            // The leak is shown already resolved: struck through and gone.
+            // The leak rests struck through and dimmed — NOT removed. Under
+            // reduced motion the still frame is the only frame there is, so it
+            // has to carry the whole argument; see seq.cull.
             setIf(strike, { scaleX: 1 })
-            setIf(leakRow, { display: 'none' })
+            setIf(leakRow, { opacity: seq.cull.dimOpacity })
             setIf([counterLineRef.current, ...resolveItems], { opacity: 1, y: 0 })
             readout.set()
+            // No replay affordance under reduced motion: there is no sequence to
+            // replay, and offering one would promise motion the user opted out of.
+            if (replayRef.current) replayRef.current.hidden = true
             return cleanup
           }
 
@@ -248,7 +254,12 @@ export default function Hero() {
             at(mk.railStart),
           )
 
-          /* ---- 0.50 → 0.78 · strike the bought click, collapse it out ---- */
+          /* ---- 0.50 → 0.78 · strike the bought click, dim it in place ----
+           * It does NOT leave the panel. See seq.cull in hero.motion.js for why
+           * removing it was the wrong ending: the struck "you paid for this
+           * click" sitting directly above "you already ranked #1 for it" is the
+           * argument, and it only reads if both rows are still on screen when
+           * the sequence stops. */
           const cu = seq.cull
           tl.to(
             strike,
@@ -263,82 +274,17 @@ export default function Hero() {
           tl.to(
             leakRow,
             {
-              opacity: 0,
-              x: cu.exitX,
+              opacity: cu.dimOpacity,
               duration: dur(cu.strikeEnd, cu.end),
-              ease: cu.collapseEase,
+              ease: cu.dimEase,
               immediateRender: false,
             },
             at(cu.strikeEnd),
           )
-          // Closing the gap is a REFLOW OF THE ROWS BELOW, not a height tween
-          // on the row leaving. scaleY collapses the culled row visually but
-          // reclaims none of its space — it shipped leaving a white hole where
-          // the sponsored result had been. Sliding the survivors up by the
-          // culled row's measured height closes it for real, and stays
-          // transform-only so no frame triggers layout.
-          let leakH = leakRow.offsetHeight
-          const measureLeak = () => {
-            leakH = leakRow.offsetHeight
-          }
-          ScrollTrigger.addEventListener('refreshInit', measureLeak)
-          detachMeasure = () =>
-            ScrollTrigger.removeEventListener('refreshInit', measureLeak)
-          measureLeak()
-
-          const below = rowEls.slice(rowEls.indexOf(leakRow) + 1)
-          tl.to(
-            leakRow,
-            {
-              scaleY: 0,
-              transformOrigin: 'top center',
-              duration: dur(cu.strikeEnd, cu.end),
-              ease: cu.reflowEase,
-              immediateRender: false,
-            },
-            at(cu.strikeEnd),
-          )
-          if (below.length) {
-            tl.to(
-              below,
-              {
-                y: () => -leakH,
-                duration: dur(cu.strikeEnd, cu.end),
-                ease: cu.reflowEase,
-                immediateRender: false,
-              },
-              at(cu.strikeEnd),
-            )
-          }
-
-          // A DELIBERATE, SCOPED EXCEPTION to transform-and-opacity-only.
-          // The rows reflow by transform, but the panel is a box sized by three
-          // rows and keeps that height — leaving 103px of blank inside the card
-          // once one row leaves, which reads as a rendering bug rather than as
-          // a result being removed. Closing the container is the one case a
-          // height tween is the honest answer, and this is ONE element, so
-          // there is no layout storm: the rule exists to stop dozens of
-          // elements triggering layout per frame, not to ban a single box from
-          // ever resizing.
-          tl.to(
-            panel,
-            {
-              height: () => panel.offsetHeight - leakH,
-              duration: dur(cu.strikeEnd, cu.end),
-              ease: cu.reflowEase,
-              immediateRender: false,
-            },
-            at(cu.strikeEnd),
-          )
-          tl.to(
-            railRef.current,
-            {
-              opacity: 0,
-              duration: dur(cu.strikeEnd, cu.end) * 0.5,
-              immediateRender: false,
-            },
-            at(cu.strikeEnd),
-          )
+          /* The connector rail STAYS. It links the row you paid for to the row
+           * you already owned, which is the thing the reader is meant to be
+           * looking at in the resting frame. It used to fade out here, because
+           * the row it pointed at was leaving. */
 
           /* ---- 0.78 → 1.00 · counter, copy, unpin ---- */
           const rs = seq.resolve
@@ -370,6 +316,42 @@ export default function Hero() {
             },
             at(rs.copyStart),
           )
+
+          /* THE REPLAY CONTROL.
+           *
+           * "If you didn't catch it right away, you'll be confused as to what
+           * you're looking at" — the resting frame now answers that on its own
+           * (seq.cull), and this is the other half: a way to just watch it again.
+           *
+           * Restarting the sequence timeline is enough. The intro (headline,
+           * panel rise, row stagger) is deliberately NOT replayed — re-running
+           * the headline reveal on a button press reads as the page reloading.
+           * Only the argument replays: query, marks, strike, resolve.
+           *
+           * The button is disabled while the sequence runs so a second click
+           * cannot restart it mid-wipe, which looks like a stutter. */
+          const replayBtn = replayRef.current
+          if (replayBtn) {
+            const setBusy = (busy) => {
+              replayBtn.disabled = busy
+              replayBtn.dataset.busy = busy ? 'true' : 'false'
+            }
+            tl.eventCallback('onStart', () => setBusy(true))
+            tl.eventCallback('onComplete', () => setBusy(false))
+            const onReplay = () => {
+              // Put the sequence's targets back to their start values first:
+              // restart() alone replays from wherever a from-tween last landed.
+              tl.pause(0).invalidate()
+              // restart() WITHOUT includeDelay. The timeline carries
+              // `intro.startDelay + intro.sequenceGap` (~1.05s) so it waits for
+              // the panel to land on first load; replaying through that delay
+              // left the button dead for a second after the click, which reads
+              // as the control not working.
+              tl.restart()
+            }
+            replayBtn.addEventListener('click', onReplay)
+            detachReplay = () => replayBtn.removeEventListener('click', onReplay)
+          }
 
           if (DEBUG) window.__hero = { tl, tlIn, rowEls }
 
@@ -485,6 +467,22 @@ export default function Hero() {
               ))}
             </div>
           </div>
+
+          {/* Replay. A real <button>, outside the aria-hidden panel so it is
+              reachable, and labelled for what it does rather than what it looks
+              like. It replays the argument only — see the handler for why the
+              headline reveal is deliberately not part of it. */}
+          <button
+            type="button"
+            className="hero__replay"
+            ref={replayRef}
+            data-busy="false"
+          >
+            <span className="hero__replay-icon" aria-hidden="true">
+              ↺
+            </span>
+            Replay
+          </button>
 
           <div className="hero__resolve" ref={resolveRef}>
             <p className="hero__counter-line" ref={counterLineRef}>

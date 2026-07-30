@@ -82,6 +82,13 @@
   line-height: 1.03;
   max-width: 24ch;
   letter-spacing: -0.025em;
+  /* Overrides base.css's `text-wrap: balance` on h1, for the same reason
+     .section-head h2 does: the headline mixes Space Grotesk with two Instrument
+     Serif italic runs at 1.09em, and the balancer chose a 548px measure inside a
+     600px column — five lines, one of them opening on the em dash so "— the
+     clicks" read as a dropped fragment. `pretty` keeps the full measure and only
+     guards the last line. */
+  text-wrap: pretty;
 }
 
 .hero__headline em { font-style: normal; }
@@ -425,7 +432,7 @@
     grid-template-rows: auto auto;
     grid-template-areas:
       'top   panel'
-      'copy  panel';
+      'copy  replay';
     align-content: center;
     align-items: start;
     justify-items: start;
@@ -436,6 +443,12 @@
 
   .hero__top { grid-area: top; align-items: flex-start; }
   .hero__resolve { grid-area: copy; align-items: flex-start; max-width: 46ch; }
+
+  /* Row 1 with the headline, row 2 with the copy — so the control sits directly
+     under the artifact it replays. It was originally a third row spanning under
+     a panel that spanned rows 1-2, which parked it ~150px below the panel's
+     bottom edge with nothing in between. */
+  .hero__replay { grid-area: replay; align-self: start; margin-top: 0; }
   .hero__counter-line,
   .hero__actions { justify-content: flex-start; }
 
@@ -443,18 +456,22 @@
      a stronger left column than two that run the full width. 19ch and not 17 —
      at 17 the line broke before the em dash, so "— the clicks" started a line,
      which reads as a dropped fragment rather than a break. */
-  .hero__headline { font-size: clamp(44px, 3.6vw, 62px); max-width: 19ch; }
+  /* No max-width: the grid column IS the measure. A `ch` cap was 19 characters
+     of the fallback metric and came out ~13 characters of Space Grotesk at 62px,
+     which pushed this to five lines and broke one of them before the em dash so
+     "— the clicks" started a line. The full 600px column sets it in four. */
+  .hero__headline { font-size: clamp(44px, 3.4vw, 56px); max-width: none; }
 
   .hero__serp {
     grid-area: panel;
+    /* Bottom of row 1, so the replay control lands hard under it. */
+    align-self: end;
     /* Fills its column rather than capping at 700px. The panel IS the argument
        the headline makes; at 700px in a 1360px shell it read as a thumbnail. */
     width: 100%;
-    align-self: center;
-    /* It spans both rows, so it can be taller than either — but never taller
-       than the stage, which is what `overflow: clip` on .hero would otherwise
-       have to crop. */
-    max-height: 76vh;
+    /* Never taller than the stage, which `overflow: clip` on .hero would
+       otherwise have to crop. */
+    max-height: 66vh;
   }
 }
 
@@ -551,4 +568,94 @@
   .hero__serp-caret { animation: none; opacity: 0; }
   .hero[data-motion='reduced'] .hero__stage { min-height: 700px; }
   .hero[data-motion='reduced'] .hero__serp-row.has-verdict { --verdict: 1; }
+}
+
+/* --------------------------------------------------------------------------
+   THE REPLAY CONTROL
+
+   Answers "if you didn't catch it right away, you'll be confused as to what
+   you're looking at". Small and quiet — it is an affordance, not a CTA, and it
+   must never compete with "Get a free leak check" two elements below it.
+
+   `pointer-events: auto` because .hero__content sets `none` so the artifact
+   stays inert; this and the CTAs are the two things that opt back in.
+   -------------------------------------------------------------------------- */
+
+.hero__replay {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 10px;
+  padding: 7px 13px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+  cursor: pointer;
+  pointer-events: auto;
+  transition: color .2s ease, border-color .2s ease, background .2s ease,
+              transform .18s var(--e-spring);
+}
+
+/* Matches the shared PRESS physics the CTAs use (siteHeader.motion.js: -1px on
+   hover, 0.97 on tap) in CSS rather than Framer Motion — this button owns a real
+   event listener and a ref, and wrapping it in motion.button to get two
+   transforms would be the tail wagging the dog. */
+.hero__replay:hover {
+  color: var(--ink);
+  border-color: var(--line-strong);
+  background: var(--panel);
+  transform: translateY(-1px);
+}
+
+.hero__replay:active:not([data-busy='true']) {
+  transform: scale(0.97);
+}
+
+/* Any `display` value on an element beats the UA's `[hidden] { display: none }`,
+   so `display: inline-flex` above silently defeated the reduced-motion branch's
+   `replayRef.current.hidden = true` — the button stayed on screen, 32.5px tall,
+   offering to replay a sequence that never runs. */
+.hero__replay[hidden] { display: none; }
+
+/* While the sequence is running. `disabled` is set by the handler, so the
+   cursor and the dimmed state are the visible half of the same fact. */
+.hero__replay[data-busy='true'] {
+  opacity: .45;
+  cursor: default;
+}
+
+.hero__replay-icon {
+  font-size: 13px;
+  line-height: 1;
+  /* The glyph sits optically high in its em box next to uppercase mono. */
+  margin-top: -1px;
+}
+
+/* Single column: the control belongs under the panel it replays, not stranded
+   at the bottom of a stack of copy. In two columns it is placed by the grid
+   (see the wide block above), so this only has to handle the centred case. */
+@media (max-width: 1239px) {
+  .hero__replay { justify-self: center; margin-top: 12px; }
+}
+
+/* A 33px pill clears the pointer bar but not the touch one. 42px is the floor
+   the rest of the site's controls use (.sc__tab, the nav toggle), and the
+   verification suite asserts it. Scoped to the breakpoint rather than applied
+   everywhere, because at 10px mono a 42px box on a mouse-driven layout is all
+   padding. */
+@media (max-width: 899px) {
+  .hero__replay { min-height: 42px; padding: 0 15px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero__replay { transition: none; }
+  .hero__replay:hover,
+  .hero__replay:active { transform: none; }
 }

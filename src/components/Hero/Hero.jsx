@@ -114,7 +114,6 @@ export default function Hero() {
            * FULL MOTION
            * ================================================================= */
           root.dataset.motion = 'full'
-          const pinVh = isMobile ? pin.mobileVh : pin.desktopVh
 
           // Everything the scrub or the intro animates starts explicitly set,
           // so no tween has to infer a "from" off the stylesheet.
@@ -171,25 +170,26 @@ export default function Hero() {
             intro.eyebrowDuration * 0.4 + 0.25,
           )
 
-          /* ---------------- SCRUB ---------------- */
-          const tl = gsap.timeline({
-            scrollTrigger: {
-              trigger: root,
-              start: 'top top',
-              end: () => `+=${pinVh}%`,
-              pin: stageRef.current,
-              pinSpacing: true,
-              scrub: pin.scrub,
-              anticipatePin: pin.anticipatePin,
-              invalidateOnRefresh: true,
-              markers: DEBUG,
-              onToggle: (self) => root.classList.toggle('is-live', self.isActive),
-            },
-          })
-
-          // Normalises the timeline to exactly 1 unit, so timeline time IS
-          // scroll progress and the numbers in hero.motion.js read as written.
-          tl.to({}, { duration: 1 }, 0)
+          /* ---------------- THE SEQUENCE — plays on arrival ----------------
+           * NOT scrubbed, and no longer pinned.
+           *
+           * It was a 175vh pin scrubbed by scroll, which ties the sequence to
+           * the scroll position in BOTH directions: scroll up and the query
+           * un-types, the marks lift, the culled row comes back. That is the
+           * turntable behaviour being removed, and latching a pin does not fix
+           * it — the viewport would stay held for 175vh with a frozen frame.
+           *
+           * So the hero performs once, on arrival, and is then a finished
+           * frame that scrolling cannot touch. A hero is the one place where
+           * autoplay is right: the reader has not asked for anything yet.
+           *
+           * `seq` is still authored in 0-1 progress units, so the storyboard
+           * reads the same; SEQ_SECONDS converts the whole thing to wall clock
+           * in one place. */
+          const tl = gsap.timeline({ delay: intro.startDelay + intro.sequenceGap })
+          const at = (u) => u * MOTION.sequenceSeconds
+          const dur = (a, b) => Math.max((b - a) * MOTION.sequenceSeconds, 0.05)
+          tl.to({}, { duration: MOTION.sequenceSeconds }, 0)
 
           /* ---- 0.00 → 0.22 · the query types in ---- */
           const q = seq.query
@@ -199,30 +199,31 @@ export default function Hero() {
               opacity: 1,
               duration: 0.001,
               ease: q.ease,
-              stagger: { amount: q.end - q.start },
+              stagger: { amount: at(q.end) - at(q.start) },
               immediateRender: false,
             },
-            q.start,
+            at(q.start),
           )
           tl.to(
             caretRef.current,
-            { opacity: 0, duration: 0.04, immediateRender: false },
-            q.end,
+            { opacity: 0, duration: 0.2, immediateRender: false },
+            at(q.end),
           )
 
           /* ---- 0.22 → 0.50 · mark the overlap ---- */
           const mk = seq.mark
-          const markDur = Math.max(mk.end - mk.start - mk.stagger, 0.05)
+          const markDur = dur(mk.start, mk.end - mk.stagger)
+          const markStagger = at(mk.stagger)
           tl.to(
             [paidRow, ownedRow],
             {
               '--verdict': 1,
               duration: markDur,
               ease: mk.ease,
-              stagger: mk.stagger,
+              stagger: markStagger,
               immediateRender: false,
             },
-            mk.start,
+            at(mk.start),
           )
           tl.to(
             marks,
@@ -231,20 +232,20 @@ export default function Hero() {
               x: 0,
               duration: markDur,
               ease: mk.ease,
-              stagger: mk.stagger,
+              stagger: markStagger,
               immediateRender: false,
             },
-            mk.start,
+            at(mk.start),
           )
           tl.to(
             railRef.current,
             {
               scaleY: 1,
-              duration: mk.railEnd - mk.railStart,
+              duration: dur(mk.railStart, mk.railEnd),
               ease: mk.railEase,
               immediateRender: false,
             },
-            mk.railStart,
+            at(mk.railStart),
           )
 
           /* ---- 0.50 → 0.78 · strike the bought click, collapse it out ---- */
@@ -253,22 +254,22 @@ export default function Hero() {
             strike,
             {
               scaleX: 1,
-              duration: cu.strikeEnd - cu.start,
+              duration: dur(cu.start, cu.strikeEnd),
               ease: cu.strikeEase,
               immediateRender: false,
             },
-            cu.start,
+            at(cu.start),
           )
           tl.to(
             leakRow,
             {
               opacity: 0,
               x: cu.exitX,
-              duration: cu.end - cu.strikeEnd,
+              duration: dur(cu.strikeEnd, cu.end),
               ease: cu.collapseEase,
               immediateRender: false,
             },
-            cu.strikeEnd,
+            at(cu.strikeEnd),
           )
           // Closing the gap is a REFLOW OF THE ROWS BELOW, not a height tween
           // on the row leaving. scaleY collapses the culled row visually but
@@ -291,22 +292,22 @@ export default function Hero() {
             {
               scaleY: 0,
               transformOrigin: 'top center',
-              duration: cu.end - cu.strikeEnd,
+              duration: dur(cu.strikeEnd, cu.end),
               ease: cu.reflowEase,
               immediateRender: false,
             },
-            cu.strikeEnd,
+            at(cu.strikeEnd),
           )
           if (below.length) {
             tl.to(
               below,
               {
                 y: () => -leakH,
-                duration: cu.end - cu.strikeEnd,
+                duration: dur(cu.strikeEnd, cu.end),
                 ease: cu.reflowEase,
                 immediateRender: false,
               },
-              cu.strikeEnd,
+              at(cu.strikeEnd),
             )
           }
 
@@ -323,54 +324,54 @@ export default function Hero() {
             panel,
             {
               height: () => panel.offsetHeight - leakH,
-              duration: cu.end - cu.strikeEnd,
+              duration: dur(cu.strikeEnd, cu.end),
               ease: cu.reflowEase,
               immediateRender: false,
             },
-            cu.strikeEnd,
+            at(cu.strikeEnd),
           )
           tl.to(
             railRef.current,
             {
               opacity: 0,
-              duration: (cu.end - cu.strikeEnd) * 0.5,
+              duration: dur(cu.strikeEnd, cu.end) * 0.5,
               immediateRender: false,
             },
-            cu.strikeEnd,
+            at(cu.strikeEnd),
           )
 
           /* ---- 0.78 → 1.00 · counter, copy, unpin ---- */
           const rs = seq.resolve
           tl.to(
             counterLineRef.current,
-            { opacity: 1, y: 0, duration: 0.05, ease: rs.ease, immediateRender: false },
-            rs.start,
+            { opacity: 1, y: 0, duration: 0.25, ease: rs.ease, immediateRender: false },
+            at(rs.start),
           )
           tl.fromTo(
             readout.readout,
             readout.from,
             {
               ...readout.to,
-              duration: rs.counterEnd - rs.start,
+              duration: dur(rs.start, rs.counterEnd),
               ease: rs.counterEase,
               immediateRender: false,
             },
-            rs.start,
+            at(rs.start),
           )
           tl.to(
             resolveItems,
             {
               opacity: 1,
               y: 0,
-              duration: Math.max(rs.end - rs.copyStart, 0.04),
+              duration: dur(rs.copyStart, rs.end),
               ease: rs.ease,
-              stagger: rs.copyStaggerEach,
+              stagger: at(rs.copyStaggerEach),
               immediateRender: false,
             },
-            rs.copyStart,
+            at(rs.copyStart),
           )
 
-          if (DEBUG) window.__hero = { tl, tlIn, st: tl.scrollTrigger, rowEls }
+          if (DEBUG) window.__hero = { tl, tlIn, rowEls }
 
           return cleanup
         },

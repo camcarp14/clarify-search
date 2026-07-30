@@ -380,6 +380,24 @@ export const SCRUB_WINDOW = {
 
 /** For short elements (footer, a strip, a note) where the standard window
  *  would be longer than the element and therefore feel dead. */
+/**
+ * The window for what used to be the three PINNED set-pieces.
+ *
+ * They no longer pin. A pinned scrub is tied to the scroll position in both
+ * directions by definition — scroll up and the sequence rewinds, which is the
+ * "record on a turntable" behaviour being removed. Latching a pin instead is
+ * worse: the viewport stays held for one to two screens while nothing moves.
+ *
+ * So they are ordinary sections with a long, monotonic window. It is wider than
+ * SCRUB_WINDOW because these carry four or five beats rather than one reveal,
+ * and each beat still needs enough scroll to read.
+ */
+export const SET_PIECE_WINDOW = {
+  desktop: { start: 'top 88%', end: 'bottom 25%' },
+  mobile: { start: 'top 94%', end: 'bottom 45%' },
+  scrub: 0.6,
+}
+
 export const SCRUB_WINDOW_SHORT = {
   desktop: { start: 'top 95%', end: 'top 45%' },
   mobile: { start: 'top 97%', end: 'top 60%' },
@@ -445,54 +463,34 @@ export const refreshSoon = () => {
 }
 
 /**
- * Publishes `document.documentElement.dataset.pinned` while ANY pinned section
- * holds the viewport.
+ * Canonical config for a SET-PIECE section — the ones that used to pin.
  *
- * The Header (§B.1 technique 2) suppresses its direction-aware hide on this
- * flag. It had a reader and no writer, so the guard was permanently falsy and
- * the header slid away mid-pin — exactly the glitch the spec names.
+ * Keeps the same call signature (`pinTarget` and `vh` are accepted and ignored)
+ * so the sections that call it did not have to change. It no longer pins and it
+ * never runs backwards: `advance()` ratchets the playhead forward only, exactly
+ * as it does for every other section.
  *
- * Derived from live triggers rather than incremented/decremented, so it is
- * self-healing: a matchMedia revert that kills an ACTIVE pinned trigger never
- * fires onToggle, and a counter would leak a stuck flag on every breakpoint
- * change.
+ * `document.documentElement.dataset.pinned` is consequently never set any more.
+ * The Header reads it to suppress its hide-on-scroll during a pin; with no pins
+ * that guard is simply always false, which is correct.
  */
-const syncPinnedFlag = () => {
-  if (typeof document === 'undefined') return
-  const anyPinned = ScrollTrigger.getAll().some((t) => t.pin && t.isActive)
-  const root = document.documentElement
-  if (anyPinned) root.dataset.pinned = 'true'
-  else delete root.dataset.pinned
-}
-
-/**
- * Canonical ScrollTrigger config for a PINNED section.
- * See §C.5 for the rules this encodes and why each field is not optional.
- *
- * `vh` must come from `pick(PIN.<preset>, isMobile)`.
- */
-export const pinnedTrigger = ({ trigger, pinTarget, vh, root, extra = {} }) => {
-  // Pulled out of the spread so a section passing its own onToggle ADDS to the
-  // shared behaviour instead of silently replacing it. This factory is the one
-  // chokepoint all three pins pass through; losing its onToggle loses both the
-  // will-change discipline and the pinned flag.
-  const { onToggle: sectionToggle, ...rest } = extra
+export const pinnedTrigger = ({ trigger, root, isMobile, extra = {} }) => {
+  const { onToggle: sectionToggle, onUpdate: sectionUpdate, ...rest } = extra
+  const win = SET_PIECE_WINDOW
   return {
     trigger,
-    start: 'top top',
-    // Function form so it re-evaluates on resize. A literal string is computed
-    // once, against whatever the viewport happened to be at mount.
-    end: () => `+=${vh}%`,
-    pin: pinTarget,
-    pinSpacing: true,
-    scrub: PIN.scrub,
-    anticipatePin: PIN.anticipatePin,
+    start: isMobile ? win.mobile.start : win.desktop.start,
+    end: isMobile ? win.mobile.end : win.desktop.end,
+    toggleActions: 'none none none none',
     invalidateOnRefresh: true,
     markers: DEBUG,
+    onUpdate: (self) => {
+      advance(self)
+      if (sectionUpdate) sectionUpdate(self)
+    },
+    onRefresh: (self) => advance(self),
     onToggle: (self) => {
-      // Drives the will-change discipline (§C.7).
-      root.classList.toggle('is-live', self.isActive)
-      syncPinnedFlag()
+      if (root) root.classList.toggle('is-live', self.isActive)
       if (sectionToggle) sectionToggle(self)
     },
     ...rest,

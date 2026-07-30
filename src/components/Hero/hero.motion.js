@@ -28,18 +28,24 @@ export const REFERENCE_TRAVERSAL_MS = 1700
 
 export const MOTION = {
   /* --------------------------------------------------------------------- */
-  /* PIN                                                                    */
+  /* HOW LONG THE WHOLE SEQUENCE TAKES, IN SECONDS                          */
   /* --------------------------------------------------------------------- */
-  pin: {
-    /** Four beats to scrub. 175vh gives each roughly 44vh — about two wheel
-     *  notches, enough to read a beat without getting bored inside one. */
-    desktopVh: 175,
-    /** Authored for a short viewport and a thumb, NOT desktop × 0.7. A flick
-     *  covers far more of a small screen per gesture. */
-    mobileVh: 125,
-    scrub: 1,
-    anticipatePin: 1,
-  },
+  /**
+   * The hero no longer pins and is no longer scrubbed. It was a 175vh pin
+   * driven by scroll position, which ties the sequence to the scroll in BOTH
+   * directions — scroll up and the query un-types, the marks lift, the culled
+   * row returns. Latching a pin does not fix that; it just holds the viewport
+   * for 175vh with a frozen frame.
+   *
+   * So it performs once, on arrival, and is then a finished frame that
+   * scrolling cannot touch. `seq` below is still authored in 0-1 progress
+   * units so the storyboard reads unchanged — this number is the only thing
+   * that converts it to wall clock.
+   *
+   * 3.4s: long enough that four beats are legible, short enough that the CTA
+   * is not withheld. The counter and copy land at 0.78 of it, so roughly 2.7s.
+   */
+  sequenceSeconds: 3.4,
 
   /* --------------------------------------------------------------------- */
   /* INTRO — plays once, on load. Wall-clock seconds.                       */
@@ -58,6 +64,9 @@ export const MOTION = {
     rowStagger: 0.09,
     rowFromY: 18,
     ease: 'power3.out',
+    /** Beat between the panel's rows landing and the sequence starting, so the
+     *  two do not read as one continuous smear. */
+    sequenceGap: 0.9,
   },
 
   /* --------------------------------------------------------------------- */

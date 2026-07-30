@@ -117,18 +117,15 @@ section.band.tinted {
 .section-head h2 {
   font-size: clamp(31px, 4vw, 66px);
   letter-spacing: -.035em;
-  /* Overrides base.css's `text-wrap: balance` on h1/h2/h3. Every heading here
-     mixes Space Grotesk with an Instrument Serif italic run at 1.06em, and the
-     balancer measures that badly — #ai-visibility's "The surface you can't buy
-     your way onto." came out 11 / 22 / 5 characters. `pretty` keeps greedy
-     full-measure lines and nudges only the last few to avoid an orphan.
-     It is a real improvement, not a cure: across the eight section headings it
-     takes single-word last lines from four down to two (#diagnosis's "page." and
-     #scorecard's "this." still orphan, and at 68 and 45 characters those do not
-     divide any better a different way). The column width above did most of the
-     work. Firefox has no `pretty` yet and falls back to greedy `normal`, which
-     is the same wrap without the last-line nudge. */
-  text-wrap: pretty;
+  /* NO text-wrap override here — base.css's `balance` on h1/h2/h3 is correct and
+     this rule used to fight it. `pretty` was added when the heading column was
+     685px wide, where the balancer produced 11 / 22 / 5 characters for
+     #ai-visibility and left four of eight headings ending on a single word. The
+     real cause was the column, not the algorithm: at 815px (the 1.25fr above)
+     `balance` gives zero orphans AND breaks at the right places — #coverage lands
+     "Three surfaces." / "Two you buy." on its two sentences, where `pretty`
+     stranded "Two" at the end of line one. Measured both across all eight
+     headings before removing this. */
 }
 .section-head > p {
   /* 17px / 52ch, up from 16 / 46. The lede is the only body copy in the head and

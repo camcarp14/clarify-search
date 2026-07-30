@@ -380,135 +380,150 @@ export default function Hero() {
     <section className="hero" id="top" ref={rootRef} aria-labelledby="heroTitle">
       <div className="hero__stage" ref={stageRef}>
         <div className="hero__content">
-          <div className="hero__top">
-            <span className="hero__eyebrow">
-              <span className="hero__dot hero__dot--a" aria-hidden="true" />
-              <span className="hero__dot hero__dot--b" aria-hidden="true" />
-              <span className="hero__dot hero__dot--c" aria-hidden="true" />
-              Paid · organic · AI search · Chicago
-            </span>
+          {/* TWO COLUMN WRAPPERS, and they exist to kill a hole.
+              The four blocks used to be direct grid children placed by
+              `grid-template-areas`, which put the panel and the headline in the
+              same row — so the row sized to the taller panel and the left column
+              got the difference as dead paper between the headline and the stat:
+              88px at a tall window, 165px at a short one.
 
-            <h1 id="heroTitle" className="hero__headline" ref={headlineRef}>
-              Own more of the results page — the clicks you{' '}
-              <em className="ital pay">buy</em> and the ones you{' '}
-              <em className="ital earn">earn</em>.
-            </h1>
-          </div>
-
-          {/* The artifact. aria-hidden because it is an illustration of a
-              results page, and every claim it makes is stated in the copy
-              around it. */}
-          <div className="hero__serp" ref={panelRef} aria-hidden="true">
-            <div className="hero__serp-bar">
-              <span className="hero__serp-dots">
-                <i />
-                <i />
-                <i />
+              Wrapped, the two columns are siblings that centre against each other
+              and neither can stretch the other's internals. Below 1240px both
+              wrappers go `display: contents` and the four blocks return to being
+              grid children in the single-column order — see Hero.css. */}
+          <div className="hero__col">
+            <div className="hero__top">
+              <span className="hero__eyebrow">
+                <span className="hero__dot hero__dot--a" aria-hidden="true" />
+                <span className="hero__dot hero__dot--b" aria-hidden="true" />
+                <span className="hero__dot hero__dot--c" aria-hidden="true" />
+                Paid · organic · AI search · Chicago
               </span>
-              <span className="hero__serp-omni">
-                <svg viewBox="0 0 16 16" width="11" height="11" aria-hidden="true">
-                  <circle
-                    cx="7"
-                    cy="7"
-                    r="4.5"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                  />
-                  <path
-                    d="M10.5 10.5 14 14"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                    strokeLinecap="round"
-                  />
-                </svg>
-                <span className="hero__serp-query" ref={queryRef}>
-                  {QUERY}
+
+              <h1 id="heroTitle" className="hero__headline" ref={headlineRef}>
+                Own more of the results page — the clicks you{' '}
+                <em className="ital pay">buy</em> and the ones you{' '}
+                <em className="ital earn">earn</em>.
+              </h1>
+            </div>
+
+            <div className="hero__resolve" ref={resolveRef}>
+              <p className="hero__counter-line" ref={counterLineRef}>
+                <span className="hero__counter" ref={counterRef}>
+                  0%
                 </span>
-                <span className="hero__serp-caret" ref={caretRef} />
-              </span>
-            </div>
+                <span className="hero__counter-label">
+                  Est. spend waste · example account
+                </span>
+              </p>
 
-            <div className="hero__serp-rows">
-              {/* The rail linking the click you bought to the one you owned. */}
-              <span className="hero__serp-rail" ref={railRef} />
+              <p className="hero__copy" data-resolve-item>
+                Clarify audits how your business shows up in Google —{' '}
+                <strong>paid ads, organic rankings, and AI answers</strong> — then
+                fixes what&rsquo;s leaking. Flat fees, month-to-month, no agency
+                theater.
+              </p>
 
-              {ROWS.map((r) => (
-                <div
-                  key={r.id}
-                  className={`hero__serp-row is-${r.kind}${
-                    r.verdict ? ` has-verdict is-${r.verdict}` : ''
-                  }`}
-                  data-row={r.id}
-                >
-                  <span className="hero__serp-tag">
-                    {r.tag}
-                    {r.badge ? <em className="hero__serp-badge">{r.badge}</em> : null}
-                  </span>
-
-                  {r.url ? <span className="hero__serp-url">{r.url}</span> : null}
-
-                  <span className="hero__serp-title">
-                    {r.title}
-                    {r.trailing ? (
-                      <span className="hero__serp-trailing"> {r.trailing}</span>
-                    ) : null}
-                    {r.leak ? <span className="hero__serp-strike" data-strike /> : null}
-                  </span>
-
-                  {r.note ? <span className="hero__serp-note">{r.note}</span> : null}
-
-                  {r.verdict ? (
-                    <span className="hero__serp-verdict" data-verdict>
-                      {VERDICT_LABEL[r.verdict]}
-                    </span>
-                  ) : null}
-                </div>
-              ))}
+              <div className="hero__actions" data-resolve-item>
+                <motion.a className="cta" href="#pricing" {...PRESS}>
+                  Get a free leak check →
+                </motion.a>
+                <motion.a className="secondary-cta" href="#method" {...PRESS}>
+                  See how it works
+                </motion.a>
+              </div>
             </div>
           </div>
 
-          {/* Replay. A real <button>, outside the aria-hidden panel so it is
-              reachable, and labelled for what it does rather than what it looks
-              like. It replays the argument only — see the handler for why the
-              headline reveal is deliberately not part of it. */}
-          <button
-            type="button"
-            className="hero__replay"
-            ref={replayRef}
-            data-busy="false"
-          >
-            <span className="hero__replay-icon" aria-hidden="true">
-              ↺
-            </span>
-            Replay
-          </button>
+          <div className="hero__aside">
+            {/* The artifact. aria-hidden because it is an illustration of a
+                results page, and every claim it makes is stated in the copy
+                around it. */}
+            <div className="hero__serp" ref={panelRef} aria-hidden="true">
+              <div className="hero__serp-bar">
+                <span className="hero__serp-dots">
+                  <i />
+                  <i />
+                  <i />
+                </span>
+                <span className="hero__serp-omni">
+                  <svg viewBox="0 0 16 16" width="11" height="11" aria-hidden="true">
+                    <circle
+                      cx="7"
+                      cy="7"
+                      r="4.5"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                    />
+                    <path
+                      d="M10.5 10.5 14 14"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  <span className="hero__serp-query" ref={queryRef}>
+                    {QUERY}
+                  </span>
+                  <span className="hero__serp-caret" ref={caretRef} />
+                </span>
+              </div>
 
-          <div className="hero__resolve" ref={resolveRef}>
-            <p className="hero__counter-line" ref={counterLineRef}>
-              <span className="hero__counter" ref={counterRef}>
-                0%
-              </span>
-              <span className="hero__counter-label">
-                Est. spend waste · example account
-              </span>
-            </p>
+              <div className="hero__serp-rows">
+                {/* The rail linking the click you bought to the one you owned. */}
+                <span className="hero__serp-rail" ref={railRef} />
 
-            <p className="hero__copy" data-resolve-item>
-              Clarify audits how your business shows up in Google —{' '}
-              <strong>paid ads, organic rankings, and AI answers</strong> — then
-              fixes what&rsquo;s leaking. Flat fees, month-to-month, no agency
-              theater.
-            </p>
+                {ROWS.map((r) => (
+                  <div
+                    key={r.id}
+                    className={`hero__serp-row is-${r.kind}${
+                      r.verdict ? ` has-verdict is-${r.verdict}` : ''
+                    }`}
+                    data-row={r.id}
+                  >
+                    <span className="hero__serp-tag">
+                      {r.tag}
+                      {r.badge ? <em className="hero__serp-badge">{r.badge}</em> : null}
+                    </span>
 
-            <div className="hero__actions" data-resolve-item>
-              <motion.a className="cta" href="#pricing" {...PRESS}>
-                Get a free leak check →
-              </motion.a>
-              <motion.a className="secondary-cta" href="#method" {...PRESS}>
-                See how it works
-              </motion.a>
+                    {r.url ? <span className="hero__serp-url">{r.url}</span> : null}
+
+                    <span className="hero__serp-title">
+                      {r.title}
+                      {r.trailing ? (
+                        <span className="hero__serp-trailing"> {r.trailing}</span>
+                      ) : null}
+                      {r.leak ? <span className="hero__serp-strike" data-strike /> : null}
+                    </span>
+
+                    {r.note ? <span className="hero__serp-note">{r.note}</span> : null}
+
+                    {r.verdict ? (
+                      <span className="hero__serp-verdict" data-verdict>
+                        {VERDICT_LABEL[r.verdict]}
+                      </span>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
             </div>
+
+            {/* Replay. A real <button>, outside the aria-hidden panel so it is
+                reachable, and labelled for what it does rather than what it looks
+                like. It replays the argument only — see the handler for why the
+                headline reveal is deliberately not part of it. */}
+            <button
+              type="button"
+              className="hero__replay"
+              ref={replayRef}
+              data-busy="false"
+            >
+              <span className="hero__replay-icon" aria-hidden="true">
+                ↺
+              </span>
+              Replay
+            </button>
           </div>
         </div>
       </div>

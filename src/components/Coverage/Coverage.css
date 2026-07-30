@@ -65,8 +65,8 @@
 
 .coverage .cov-panel {
   position: relative;
-  /* Keeps both the 2px top rule and the spotlight layer inside the rounded
-     corners. Removing it leaks both past the radius. */
+  /* Keeps the top rule, the channel wash and the spotlight layer inside the
+     rounded corners. Removing it leaks all three past the radius. */
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -74,7 +74,23 @@
   padding: 30px 28px;
   border: 1px solid var(--line);
   border-radius: 20px;
-  background: var(--surface);
+  /* THE CHANNEL WASH. Both panels used to be the same translucent white with a
+     2px accent line on top, so "paid" and "organic" were told entirely by a
+     hairline and a 10px label — which is why the section read as two identical
+     boxes rather than as the two sides of the argument. The wash gives each one
+     its channel's light across the whole head zone, fading out by the time it
+     reaches the list. --surface stays underneath so the band's own gradient
+     still shows through, as it must. */
+  background:
+    linear-gradient(
+      180deg,
+      rgba(var(--cov-rgb, var(--tint-rgb)), .09),
+      rgba(var(--cov-rgb, var(--tint-rgb)), 0) 46%
+    ),
+    var(--surface);
+  /* Lifted off the tinted band. Flat panels on a tinted ground read as pasted
+     on; one step of the warm elevation ramp reads as sitting above it. */
+  box-shadow: var(--lift-2);
 }
 
 /* 2px accent rule across the top, fed by the --cov-acc variable the .paid /
@@ -86,12 +102,23 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 2px;
+  /* 3px, up from 2. At 2px against a 20px radius the accent read as an artifact
+     of the border rather than as a deliberate marker. */
+  height: 3px;
   background: var(--cov-acc, var(--line-strong));
 }
 
-.coverage .cov-panel.paid { --cov-acc: linear-gradient(90deg, var(--amber), transparent); }
-.coverage .cov-panel.org  { --cov-acc: linear-gradient(90deg, var(--mint), transparent); }
+/* Two variables per channel now: the gradient for the top rule, and the raw rgb
+   triplet the head wash needs (a gradient cannot be re-used inside another
+   gradient's colour stops). */
+.coverage .cov-panel.paid {
+  --cov-acc: linear-gradient(90deg, var(--amber), rgba(var(--amber-rgb), .15) 70%, transparent);
+  --cov-rgb: var(--amber-rgb);
+}
+.coverage .cov-panel.org {
+  --cov-acc: linear-gradient(90deg, var(--mint), rgba(var(--mint-rgb), .15) 70%, transparent);
+  --cov-rgb: var(--mint-rgb);
+}
 
 /* --------------------------------------------------------------------------
    3. PANEL TAG — and its mask
@@ -128,7 +155,7 @@
    4. PANEL BODY
    -------------------------------------------------------------------------- */
 
-.coverage .cov-panel h3 { font-size: 21px; }
+.coverage .cov-panel h3 { font-size: 23px; letter-spacing: -.02em; }
 
 .coverage .cov-panel > p {
   font-size: 13.5px;
@@ -247,6 +274,28 @@
   text-transform: uppercase;
   color: var(--muted);
   line-height: 1.5;
+  /* Lifted, like the two panels either side. Four flat outlined boxes on the
+     tinted band read as placeholders. */
+  box-shadow: var(--lift-1);
+}
+
+/* THE SHARED-CORE MARK. Each node carries a 3px slice of the same amber → mint
+   gradient the spine rail is drawn in — which is the point of these four items:
+   they belong to BOTH channels, not to one. An accent in a single colour would
+   have said the opposite.
+
+   A pseudo-element rather than `border-left`, because a gradient cannot be a
+   border colour, and inset by the radius so it does not fight the rounded
+   corner. */
+.coverage .spine-node::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: linear-gradient(180deg, var(--amber), var(--mint));
 }
 
 .coverage .spine-node strong {

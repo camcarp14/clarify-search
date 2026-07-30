@@ -65,17 +65,23 @@
      of blank paper below them. Equal fractions let them stretch to close it, so
      the two columns end on the same line — which is what `align-items: start`
      on .why-grid was always trying to say.
-     `grid-auto-rows: 1fr` and NOT `align-self: stretch` on the column. In an
-     auto-height grid a `1fr` row resolves to the tallest row's content, so the
-     two cards match each other — the two-line card grows to the three-line
-     card's height, which is what the level bottom edge needs. Stretching the
-     COLUMN to the copy column's full height as well was the first attempt and
-     it was worse: the extra 70px all landed inside the short card as a hole
-     under its paragraph. Matching the cards to each other closes most of the
-     gap and leaves none of it visible.
-     Counter for the ordinals below. */
-  grid-auto-rows: 1fr;
+     Counter for the ordinals below; the height matching is in the media query
+     underneath, and the reason it is scoped there matters. */
   counter-reset: whycard;
+}
+
+/* MATCHED CARD HEIGHTS — desktop only, and the breakpoint is load-bearing.
+   In an auto-height grid a `1fr` row resolves to the tallest row's content, so
+   the two-line card grows to the three-line card's height and the column ends
+   level with the copy beside it. That is worth 48px of the 70px gap.
+   Below 1080px `.why-grid` collapses to one column (see the responsive block
+   at the bottom of this file), so there is no second column left to end level
+   WITH — and the copy wraps harder at those widths, which widens the height
+   difference. Matching heights there just relocates the hole to the inside of
+   the short card, which is worse than an uneven bottom edge nobody can see.
+   Same reasoning applies to #ai-visibility's .ai-cards. */
+@media (min-width: 1081px) {
+  .why-cards { grid-auto-rows: 1fr; }
 }
 
 .why-card {

@@ -63,21 +63,44 @@ button, input, textarea, select { font: inherit; }
 /* legacy 398-399. Nine consumers; four are tinted.
    `section.band` keeps the element qualifier so the specificity matches legacy
    and the per-section overrides written against it still land. */
+/* 78px, down from legacy's 116. Two adjacent bands each contributed their own
+   116 plus the 1px seam, so every section boundary was 233px of blank paper —
+   at a 1000px viewport that is a quarter of a screen, eleven times down the
+   page, and it was the single biggest reason the page read as empty. 78 keeps
+   the bands clearly separate (still 157px seam to seam) without the void.
+   Mobile's 56 is unchanged: at that width the gap was never the problem. */
 section.band {
-  padding: 116px 0;
+  padding: 78px 0;
   border-top: 1px solid var(--line);
-}
-section.band.tinted {
-  background: linear-gradient(180deg, var(--bg-2), transparent 70%);
+  /* Each band gets its own light instead of one flat fill across the whole
+     page. Two very soft washes on opposite corners, warm top-left / cool
+     bottom-right, on the same paid-amber → organic-mint axis the brand uses
+     everywhere else. They are large and low-alpha on purpose: the effect should
+     be that the paper is lit, not that there is a gradient on it. */
+  background-image:
+    radial-gradient(72rem 42rem at 12% 0%, rgba(var(--amber-rgb), .05), transparent 62%),
+    radial-gradient(64rem 38rem at 90% 100%, rgba(var(--mint-rgb), .042), transparent 62%);
 }
 
-/* legacy 401-404. Six consumers. */
+/* background-IMAGE, not the `background` shorthand: the shorthand would reset
+   the two washes above. The tint goes FIRST so it sits on top of them. */
+section.band.tinted {
+  background-image:
+    linear-gradient(180deg, var(--bg-2), transparent 70%),
+    radial-gradient(72rem 42rem at 12% 0%, rgba(var(--amber-rgb), .05), transparent 62%),
+    radial-gradient(64rem 38rem at 90% 100%, rgba(var(--mint-rgb), .042), transparent 62%);
+}
+
+/* legacy 401-404. Six consumers.
+   44px, down from legacy's 64. Combined with the band padding above, each
+   section's copy now starts 20px sooner and the head no longer floats
+   disconnected from the thing it introduces. */
 .section-head {
   display: grid;
   grid-template-columns: 1.05fr .95fr;
   gap: 56px;
   align-items: end;
-  margin-bottom: 64px;
+  margin-bottom: 44px;
 }
 .section-head h2 {
   font-size: clamp(31px, 4vw, 54px);
@@ -88,6 +111,12 @@ section.band.tinted {
   color: var(--muted);
   max-width: 46ch;
   justify-self: end;
+  /* The grid is `align-items: end`, which bottom-aligned this paragraph to a
+     four-line headline and left ~170px of dead paper directly above it. Centred
+     against the headline block, the same slack splits into two smaller halves
+     either side — which reads as air rather than as a hole. `align-self` so
+     only the paragraph moves; the .lede column stays bottom-aligned. */
+  align-self: center;
 }
 
 /* legacy declares this twice with identical values — `.section-head .lede`

@@ -48,10 +48,11 @@
    PINNED STAGE
    -------------------------------------------------------------------------- */
 
-/* PIN. `section.band` ships `padding: 116px 0` (components.css §1). On a
-   pinned section that padding has to live INSIDE the pinned element, or the
-   section box is 100vh + 232px, the pin spacer inherits the difference, and
-   the band's own air turns into dead scroll on both sides of the set-piece.
+/* `section.band` ships `padding: 78px 0` (components.css §1); this section
+   zeroes it and re-declares the air INSIDE .aib__stage instead, because the
+   stage is a 100vh frame and outer padding would make the section box
+   100vh + 156px. Written when the section was pinned — the pin is gone, but the
+   stage is still a full-viewport frame and the reason still holds.
    The border-top is left alone — it is the seam with #pricing. */
 section.band#ai-build {
   padding: 0;

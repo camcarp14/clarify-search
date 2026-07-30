@@ -22,10 +22,11 @@
    PINNED STAGE
    -------------------------------------------------------------------------- */
 
-/* PIN. `section.band` ships `padding: 116px 0` (components.css §1). On a
-   pinned section that padding has to live INSIDE the pinned element, or the
-   section box is 100vh + 232px, the pin spacer inherits the difference, and
-   the band's own air turns into dead scroll on both sides of the set-piece.
+/* `section.band` ships `padding: 78px 0` (components.css §1); this section
+   zeroes it and re-declares the air INSIDE .aiviz__stage instead, because the
+   stage is a 100vh frame and outer padding would make the section box
+   100vh + 156px. Written when the section was pinned — the pin is gone, but the
+   stage is still a full-viewport frame and the reason still holds.
    The border-top is left alone — it is the seam with #coverage. */
 section.band#ai-visibility {
   padding: 0;
@@ -385,9 +386,10 @@ section.band#ai-visibility {
   grid-template-columns: 1fr 1fr;
   gap: 14px;
   /* Four cards of unequal copy left a ragged 2x2 — row 2 taller than row 1, and
-     the whole block ending 120px above the SERP mock beside it. `1fr` rows in an
-     auto-height grid resolve to the tallest row's content, so both rows match
-     and the column closes most of that gap. Same treatment as .why-cards. */
+     the block ending 120px above the SERP mock beside it. `1fr` rows in an
+     auto-height grid resolve to the tallest row's content, so both rows match.
+     Correct at every width where this stays a 2x2, which is every width except
+     the reduced-motion mobile case that collapses it — see the `auto` below. */
   grid-auto-rows: 1fr;
 }
 
@@ -564,7 +566,7 @@ section.band#ai-visibility {
   /* Without a pin the stage has no reason to reserve a viewport. */
   #ai-visibility .aiviz__stage {
     min-height: 0;
-    padding: 116px 0;
+    padding: 78px 0;
   }
   #ai-visibility .aiviz__caret { animation: none; }
 }
@@ -615,5 +617,14 @@ section.band#ai-visibility {
 /* legacy 1513 — the one-column card stack, restored where there is no pinned
    frame to fit it into. */
 @media (prefers-reduced-motion: reduce) and (max-width: 760px) {
-  #ai-visibility .ai-cards { grid-template-columns: 1fr; }
+  #ai-visibility .ai-cards {
+    grid-template-columns: 1fr;
+    /* Paired with the collapse, not optional. `grid-auto-rows: 1fr` on the base
+       rule matches row heights, which is right in a 2x2 — it takes slack off the
+       bottom edge. In ONE column every card is its own row, so matching them
+       pushes all four to the tallest card's height and the slack reappears as a
+       hole inside each shorter one. Any future rule that collapses this grid
+       needs this line too. */
+    grid-auto-rows: auto;
+  }
 }

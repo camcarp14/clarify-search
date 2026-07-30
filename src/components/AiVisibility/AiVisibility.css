@@ -384,11 +384,17 @@ section.band#ai-visibility {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 14px;
+  /* Four cards of unequal copy left a ragged 2x2 — row 2 taller than row 1, and
+     the whole block ending 120px above the SERP mock beside it. `1fr` rows in an
+     auto-height grid resolve to the tallest row's content, so both rows match
+     and the column closes most of that gap. Same treatment as .why-cards. */
+  grid-auto-rows: 1fr;
 }
 
 #ai-visibility .ai-card {
   display: grid;
   gap: 7px;
+  align-content: start;
   padding: 22px;
   border: 1px solid var(--line);
   border-radius: 16px;

@@ -68,7 +68,6 @@ export default function AiVisibility() {
         const cards = gsap.utils.toArray('[data-ai-card]', root)
         const numsRest = gsap.utils.toArray('[data-num-rest]', root)
         const numsAccent = gsap.utils.toArray('[data-num-accent]', root)
-        const rails = gsap.utils.toArray('[data-cite-rail]', root)
         const dots = gsap.utils.toArray('[data-cite-dot]', root)
         const citesLabel = gsap.utils.toArray('[data-cites-label]', root)
 
@@ -91,17 +90,6 @@ export default function AiVisibility() {
           H.paid = rowPaid ? rowPaid.offsetHeight : 0
           H.org = rowOrg ? rowOrg.offsetHeight : 0
 
-          /* Static geometry for the connector rails: they hang off the AI
-           * row's bottom edge and must reach past the paid row into the
-           * organic one. Written once, as a custom property — it is never
-           * tweened, so this is a layout write in the same category as the
-           * hero writing left/top on its chip slots, not a height animation. */
-          if (rowAi) {
-            rowAi.style.setProperty(
-              '--aiviz-rail-len',
-              `${H.paid + pick(seq.rails.intoOrgPx, isMobile)}px`,
-            )
-          }
         }
         measure()
         ScrollTrigger.addEventListener('refreshInit', measure)
@@ -148,7 +136,7 @@ export default function AiVisibility() {
           setIf(numsRest, { opacity: 0 })
           setIf(numsAccent, { opacity: 1 })
           /* §B.5: "connectors at scaleY: 1". */
-          setIf(rails, { scaleY: 1 })
+          setIf(underlayRef.current, { opacity: 1 })
           setIf(dots, { opacity: 1 })
           setIf(citesLabel, { opacity: 1 })
           /* §B.5 is explicit that the Sponsored tag stays at FULL opacity
@@ -365,26 +353,13 @@ export default function AiVisibility() {
           ai.start,
         )
 
-        /* ---- 0.62 → 0.76 · the citation rails draw ----
-         * A gauge, not a flourish: EASE.rail, because the user must read it as
-         * attached to the scroll (§B.13 #6). Desktop only — see below for the
-         * mobile substitute. */
+        /* ---- 0.62 → 0.76 · the citation lands ----
+         * `seq.rails` still names this window; it is the citation beat. It used
+         * to drive three 1px connector rails hanging from the dots down through
+         * the sponsored row — those are gone (they read as scratches across the
+         * one row that is NOT the source). The dots plus the organic row's wash
+         * below carry it now. */
         const rl = seq.rails
-        if (!isMobile) {
-          tl.fromTo(
-            rails,
-            { scaleY: 0 },
-            {
-              scaleY: 1,
-              duration: fit(rl.end - rl.start, (rails.length - 1) * rl.staggerEach),
-              ease: rl.ease,
-              stagger: rl.staggerEach,
-            },
-            rl.start,
-          )
-        }
-        /* The dots fade in on both breakpoints — they are the rails' origin on
-         * desktop and the citation count on mobile. */
         tl.fromTo(
           dots,
           { opacity: 0 },
@@ -397,18 +372,17 @@ export default function AiVisibility() {
           rl.start,
         )
 
-        /* MOBILE substitute for the rails, on the same window: a tinted
-         * underlay behind r-org, making the same point at a legible scale.
-         * Three 1px verticals at 390px are sub-pixel mush (§B.5 mobile). */
-        if (isMobile) {
-          const ul = seq.orgUnderlay
-          tl.fromTo(
-            underlayRef.current,
-            { opacity: 0 },
-            { opacity: 1, duration: ul.end - ul.start, ease: ul.ease },
-            ul.start,
-          )
-        }
+        /* The citation link, on BOTH breakpoints now. Was the mobile-only
+         * substitute for the three connector rails; it is the whole treatment
+         * since the rails were removed for reading as scratches across the
+         * sponsored row. */
+        const ul = seq.orgUnderlay
+        tl.fromTo(
+          underlayRef.current,
+          { opacity: 0 },
+          { opacity: 1, duration: ul.end - ul.start, ease: ul.ease },
+          ul.start,
+        )
 
         /* ---- 0.72 → 0.82 · "3 sources cited" ---- */
         const cl = seq.citesLabel
@@ -591,8 +565,7 @@ export default function AiVisibility() {
               {/*
                 Clip container for the assembly. Rows enter from above their
                 slots and must be cut off at the top of the results area rather
-                than sliding over the omnibox; the citation rails hang out of
-                the AI row's bottom edge and must be cut off at the panel's.
+                than sliding over the omnibox.
                 A plain wrapper — it carries no role and no copy.
               */}
               <div className="aiviz__rows">
@@ -615,17 +588,6 @@ export default function AiVisibility() {
                   </span>
                   <span className="serp-note">{SERP_ROWS.ai.note}</span>
 
-                  {/* Connector rails: decorative, desktop-only, out of flow. */}
-                  <span className="aiviz__rails" aria-hidden="true">
-                    {Array.from({ length: CITE_COUNT }, (_, i) => (
-                      <i
-                        className="aiviz__rail"
-                        key={i}
-                        data-cite-rail=""
-                        style={{ '--rail-i': String(i) }}
-                      />
-                    ))}
-                  </span>
                 </div>
 
                 <div className="serp-row r-paid" ref={rowPaidRef}>
@@ -642,7 +604,13 @@ export default function AiVisibility() {
                 </div>
 
                 <div className="serp-row r-org" ref={rowOrgRef}>
-                  {/* Mobile stand-in for the connector rails. */}
+                  {/* The citation link, on every breakpoint. A soft mint wash
+                      over the row the AI answer is actually built from — which
+                      is what this row's own note says. Replaced three 1px
+                      verticals that hung off the citation dots: they had to
+                      cross the SPONSORED row to get here, and a hairline
+                      cutting through the one row that is NOT the source read as
+                      a scratch on the artifact rather than as a connector. */}
                   <span className="aiviz__org-underlay" aria-hidden="true" ref={underlayRef} />
                   <span className="serp-tag">{SERP_ROWS.org.tag}</span>
                   <span className="serp-url">{SERP_ROWS.org.url}</span>
@@ -655,36 +623,49 @@ export default function AiVisibility() {
               </div>
             </aside>
 
-            <div className="ai-cards">
-              {AI_CARDS.map((card) => (
-                <article className="ai-card" key={card.num} data-ai-card="">
-                  <span className="ai-num">
-                    <span className="aiviz__num-face aiviz__num-face--rest" data-num-rest="">
-                      {card.num}
+            {/* The right column: the four cards and the note they build to.
+                A wrapper, not three siblings of .ai-grid — the grid is two
+                columns, so a bare third child would drop into row 2 / column 1,
+                under the SERP mock. */}
+            <div className="ai-col">
+              <div className="ai-cards">
+                {AI_CARDS.map((card) => (
+                  <article className="ai-card" key={card.num} data-ai-card="">
+                    <span className="ai-num">
+                      <span className="aiviz__num-face aiviz__num-face--rest" data-num-rest="">
+                        {card.num}
+                      </span>
+                      <span
+                        className="aiviz__num-face aiviz__num-face--accent"
+                        data-num-accent=""
+                        aria-hidden="true"
+                      >
+                        {card.num}
+                      </span>
                     </span>
-                    <span
-                      className="aiviz__num-face aiviz__num-face--accent"
-                      data-num-accent=""
-                      aria-hidden="true"
-                    >
-                      {card.num}
-                    </span>
-                  </span>
-                  <h3>{card.title}</h3>
-                  <p>{card.body}</p>
-                </article>
-              ))}
-            </div>
-          </div>
+                    <h3>{card.title}</h3>
+                    <p>{card.body}</p>
+                  </article>
+                ))}
+              </div>
 
-          <div className="ai-note" ref={noteRef}>
-            <span className="ai-note-mark" aria-hidden="true">
-              ✦
-            </span>
-            <span ref={noteTextRef}>
-              <strong>Nobody controls what a model says.</strong> The honest goal is being the
-              clearest, best-structured source for it to reach for.
-            </span>
+              {/* The note lives INSIDE the right column, under the cards, rather
+                  than spanning the grid below it. Two reasons, one visual and one
+                  structural: full-width it set as a single line and left the card
+                  column ending 130px short of the SERP mock beside it, and it is
+                  the conclusion the four cards build to — it belongs with them,
+                  not floating under both columns. DOM order is unchanged: mock →
+                  cards → note. */}
+              <div className="ai-note" ref={noteRef}>
+                <span className="ai-note-mark" aria-hidden="true">
+                  ✦
+                </span>
+                <span ref={noteTextRef}>
+                  <strong>Nobody controls what a model says.</strong> The honest goal is being the
+                  clearest, best-structured source for it to reach for.
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </div>

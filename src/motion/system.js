@@ -392,9 +392,29 @@ export const SCRUB_WINDOW = {
  * SCRUB_WINDOW because these carry four or five beats rather than one reveal,
  * and each beat still needs enough scroll to read.
  */
+/**
+ * The two full-viewport set pieces (#ai-visibility, #ai-build).
+ *
+ * BOTH EDGES ANCHOR TO THE SECTION TOP. `end` used to be `bottom 25%`, and that
+ * was a real bug with a very confusing symptom.
+ *
+ * These sections are `min-height: 100vh`, so a `bottom`-anchored end makes the
+ * scroll distance a function of the section's own height. At 1250px tall the
+ * window spanned 2038px of scroll — and the moment the section finished filling
+ * the viewport, which is when a reader considers it "arrived", progress was only
+ * **0.54**. Every beat after that (the citation rails at 0.62, the label at
+ * 0.72, the four cards at 0.74-0.90) required scrolling a further 400-900px
+ * past a stage that already looked settled. The section read as half-built.
+ *
+ * Top-anchored at both ends, the timeline completes as the section comes to rest
+ * in the viewport: 0.90 × viewport height of scroll, independent of how tall the
+ * section's content happens to be. This is the same fix #method needed for the
+ * same reason — see SCRUB_WINDOW, which was corrected earlier and is why the
+ * workhorse sections did not have this problem.
+ */
 export const SET_PIECE_WINDOW = {
-  desktop: { start: 'top 88%', end: 'bottom 25%' },
-  mobile: { start: 'top 94%', end: 'bottom 45%' },
+  desktop: { start: 'top 95%', end: 'top 5%' },
+  mobile: { start: 'top 97%', end: 'top 8%' },
   scrub: 0.6,
 }
 
@@ -488,7 +508,7 @@ export const pinnedTrigger = ({ trigger, root, isMobile, extra = {} }) => {
       advance(self)
       if (sectionUpdate) sectionUpdate(self)
     },
-    onRefresh: (self) => advance(self),
+    onRefresh: reassert,
     onToggle: (self) => {
       if (root) root.classList.toggle('is-live', self.isActive)
       if (sectionToggle) sectionToggle(self)
@@ -578,10 +598,52 @@ const PEAK = new WeakMap()
 const advance = (self) => {
   const tl = self.animation
   if (!tl) return
-  const peak = PEAK.get(tl) || 0
-  if (self.progress <= peak) return
-  PEAK.set(tl, self.progress)
-  tl.progress(self.progress)
+
+  const peak = Math.max(PEAK.get(tl) || 0, self.progress)
+  PEAK.set(tl, peak)
+
+  /* Hold the peak frame. Scrolling up re-asserts it rather than rewinding,
+     which is the whole point of the latch. */
+  if (tl.progress() !== peak) tl.progress(peak)
+}
+
+/**
+ * The refresh-time half of the latch. MUST force a render.
+ *
+ * This exists because of a bug that was live on the site, and the symptom points
+ * the wrong way. In #ai-visibility, cards 02-04 appeared and card 01 stayed
+ * invisible at every scroll position; two of three citation rails drew and the
+ * first stayed collapsed.
+ *
+ * That reads as "card 01 fails to reveal". It is the opposite: cards 02-04 were
+ * never HIDDEN, so nothing about them was ever waiting on the scroll, and only
+ * card 01 was correctly holding its start state.
+ *
+ * Cause: `invalidateOnRefresh: true` (below). Each refresh reverts the timeline
+ * toward time 0, re-firing `immediateRender` from-states — and a time-0 render of
+ * a STAGGERED tween only renders the child that spans time 0, which is target[0].
+ * Targets 1..n are left at their natural CSS state, looking finished. The
+ * timeline's own playhead still reads `peak`, so nothing downstream notices the
+ * targets no longer agree with it.
+ *
+ * `tl.progress(peak)` cannot repair it: the requested time already EQUALS the
+ * current time, so GSAP short-circuits without re-rendering.
+ * `render(time, suppressEvents, force)` is the only call that re-renders at an
+ * unchanged time, which is what puts every target back in agreement.
+ *
+ * App.jsx fires two deliberate refreshes on every page load (after fonts, and
+ * again on window load), so this reproduced on every cold visit — and it survived
+ * scroll-only checking, because scrolling alone never triggers a refresh.
+ *
+ * Kept separate from advance() so the force costs one render per refresh rather
+ * than one per scroll frame.
+ */
+const reassert = (self) => {
+  const tl = self.animation
+  if (!tl) return
+  const peak = Math.max(PEAK.get(tl) || 0, self.progress)
+  PEAK.set(tl, peak)
+  tl.render(peak * tl.duration(), false, true)
 }
 
 /**
@@ -610,9 +672,10 @@ export const scrubbedTrigger = ({
       advance(self)
       if (sectionUpdate) sectionUpdate(self)
     },
-    // A refresh re-measures the trigger; re-assert so a resize cannot drop a
-    // section back to a state the reader has already scrolled past.
-    onRefresh: (self) => advance(self),
+    // A refresh re-measures the trigger AND (with invalidateOnRefresh) resets
+    // one element per tween back to its start state — see reassert(), which
+    // forces the corrective render that advance() would short-circuit.
+    onRefresh: reassert,
     onToggle: (self) => {
       root.classList.toggle('is-live', self.isActive)
       if (sectionToggle) sectionToggle(self)

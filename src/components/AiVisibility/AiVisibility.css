@@ -172,11 +172,10 @@ section.band#ai-visibility {
   50%, 100% { opacity: 0; }
 }
 
-/* MOTION. Clip container for the assembly. The three rows enter from ABOVE
-   their slots and have to be cut off at the top of the results area rather
-   than sliding over the omnibox; the citation rails hang out of the AI row's
-   bottom edge and have to be cut off at the panel's. `.serp`'s own
-   overflow:hidden cannot do the first job, because the omnibox is inside it. */
+/* MOTION. Clip container for the assembly. The three rows enter from ABOVE their
+   slots and have to be cut off at the top of the results area rather than
+   sliding over the omnibox. `.serp`'s own overflow:hidden cannot do that job,
+   because the omnibox is inside it. */
 #ai-visibility .aiviz__rows {
   position: relative;
   overflow: hidden;
@@ -324,43 +323,12 @@ section.band#ai-visibility {
   color: var(--muted);
 }
 
-/* --------------------------------------------------------------------------
-   MOTION — connector rails (desktop) and the organic underlay (mobile)
-   §B.5's 0.54 → 0.74 beat: the AI answer above is built out of the organic
-   result below. The rails are a GAUGE — they are drawn on EASE.rail and can be
-   parked half-drawn — not a flourish.
-   -------------------------------------------------------------------------- */
-
-#ai-visibility .aiviz__rails {
-  position: absolute;
-  left: 0;
-  /* Hangs from the AI row's bottom edge. `--aiviz-rail-len` is written once,
-     per refresh, by the effect (paid row height + reach into the organic row).
-     It is never tweened — the only animated channel on a rail is scaleY. */
-  top: 100%;
-  height: var(--aiviz-rail-len, 88px);
-  width: 100%;
-  pointer-events: none;
-}
-
-#ai-visibility .aiviz__rail {
-  position: absolute;
-  top: 0;
-  /* Aligned under the citation dots: 20px row padding + half a 15px dot, then
-     one 21px pitch (15px dot + 6px gap) per index. */
-  left: calc(20px + 7.5px + var(--rail-i, 0) * 21px);
-  width: 1px;
-  height: 100%;
-  background: linear-gradient(
-    180deg,
-    rgba(154, 140, 255, .55),
-    rgba(154, 140, 255, .12)
-  );
-  transform-origin: 50% 0;
-}
-
-/* Legacy has no equivalent; this is the mobile stand-in for the rails. Inset
-   3px from the left so it never covers the row's own accent rail. */
+/* THE CITATION LINK. Legacy has no equivalent. Was the mobile-only stand-in for
+   three 1px connector rails that hung from the citation dots down through the
+   sponsored row into this one; those are gone, and this is the treatment on every
+   breakpoint now. A wash over the row the answer is built from says the same
+   thing as a line pointing at it, without crossing the one row that is NOT the
+   source. Inset 3px from the left so it never covers the row's own accent rail. */
 #ai-visibility .aiviz__org-underlay {
   position: absolute;
   top: 0;
@@ -441,10 +409,13 @@ section.band#ai-visibility {
 
 #ai-visibility .ai-note {
   display: flex;
-  align-items: center;
+  /* `flex-start`, not `center`: in the right column the note sets on two or
+     three lines, and a vertically-centred mark next to a three-line paragraph
+     floats. Aligned to the top it reads as a marginal mark on the first line. */
+  align-items: flex-start;
   gap: 14px;
-  margin-top: 24px;
-  padding: 20px 26px;
+  margin-top: 14px;
+  padding: 18px 22px;
   border: 1px solid rgba(var(--iris-rgb), .22);
   background: linear-gradient(
     90deg,
@@ -483,13 +454,11 @@ section.band#ai-visibility {
 #ai-visibility .serp-row,
 #ai-visibility .ai-card,
 #ai-visibility .ai-note,
-#ai-visibility .aiviz__rail,
 #ai-visibility .aiviz__char { will-change: auto; }
 
 #ai-visibility.is-live .serp-row,
 #ai-visibility.is-live .ai-card,
 #ai-visibility.is-live .ai-note,
-#ai-visibility.is-live .aiviz__rail,
 #ai-visibility.is-live .aiviz__char { will-change: transform, opacity; }
 
 /* --------------------------------------------------------------------------
@@ -544,7 +513,6 @@ section.band#ai-visibility {
      verticals at 390px are sub-pixel mush. `.aiviz__org-underlay` carries the
      same beat instead. The effect skips their tween on this branch; this rule
      is what guarantees they cannot appear even if it did not. */
-  #ai-visibility .aiviz__rails { display: none; }
 }
 
 /* Short viewports at any width — small laptops, tablets in landscape. Buys

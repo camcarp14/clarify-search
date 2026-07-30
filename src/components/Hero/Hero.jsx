@@ -131,7 +131,6 @@ export default function Hero() {
           setIf(marks, { opacity: 0, x: seq.mark.labelFromX })
           setIf(railRef.current, { scaleY: 0 })
           setIf(strike, { scaleX: 0 })
-          setIf(resolveItems, { opacity: 0, y: seq.resolve.copyFromY })
 
           /* ---------------- INTRO — once, on load ---------------- */
           const eyebrow = root.querySelector('.hero__eyebrow')
@@ -175,6 +174,32 @@ export default function Hero() {
               stagger: intro.rowStagger,
             },
             intro.eyebrowDuration * 0.4 + 0.25,
+          )
+
+          /* ---- the copy and CTAs, WITH THE INTRO ----
+           *
+           * These used to land at 0.78 of the scrubbed sequence, which after the
+           * sequence slowed to 5.6s meant the paragraph and both buttons sat at
+           * opacity 0 for SEVEN SECONDS. On a phone, where the layout stacks,
+           * that reserved 278px of blank between the replay control and the
+           * scorecard and read as a rendering fault — which is exactly what it
+           * was reported as.
+           *
+           * They belong here. The 0.78 placement existed to land the 18% counter
+           * after the argument had been made; that counter went with the callout,
+           * and nothing about a paragraph of positioning copy or the primary CTA
+           * should wait on a SERP animation. The sequence now owns only the SERP.
+           */
+          tlIn.from(
+            resolveItems,
+            {
+              opacity: 0,
+              y: seq.resolve.copyFromY,
+              duration: intro.panelDuration,
+              ease: intro.ease,
+              stagger: intro.rowStagger,
+            },
+            intro.eyebrowDuration * 0.4 + 0.35,
           )
 
           /* ---------------- THE SEQUENCE — plays on arrival ----------------
@@ -287,22 +312,6 @@ export default function Hero() {
            * looking at in the resting frame. It used to fade out here, because
            * the row it pointed at was leaving. */
 
-          /* ---- 0.78 → 1.00 · the copy and CTAs land ----
-           * The 18% counter used to run here. It went with the callout — the
-           * scorecard in the aside carries that number now, on its own clock. */
-          const rs = seq.resolve
-          tl.to(
-            resolveItems,
-            {
-              opacity: 1,
-              y: 0,
-              duration: dur(rs.copyStart, rs.end),
-              ease: rs.ease,
-              stagger: at(rs.copyStaggerEach),
-              immediateRender: false,
-            },
-            at(rs.copyStart),
-          )
 
           /* THE REPLAY CONTROL.
            *

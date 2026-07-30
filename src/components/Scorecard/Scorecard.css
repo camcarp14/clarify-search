@@ -7,19 +7,53 @@
    directly under the SERP mock. `.sc` is a plain wrapper today, not a band.
    ========================================================================== */
 
-/* The whole section retints per channel from one place, exactly as legacy's
-   #pricing does. Everything below reads --acc / --acc-soft / --acc-rgb. */
-.sc { --acc: var(--amber); --acc-soft: var(--amber-soft); --acc-rgb: var(--amber-rgb); }
+/* The panel retints per channel from one place, exactly as legacy's #pricing
+   does. Everything below reads --acc / --acc-soft / --acc-rgb.
+
+   `text-align: left` is not cosmetic here, it is a fix. The hero's content plane
+   sets `text-align: center` for its stacked mobile layout, and the scorecard
+   inherited it the moment it moved in — so on a phone the verdict sentence, both
+   mini-stat labels and all four row notes rendered centred. A data panel with
+   centred body copy reads as a slide, not as a report, and that was most of what
+   made this look unpolished. */
+.sc {
+  --acc: var(--amber);
+  --acc-soft: var(--amber-soft);
+  --acc-rgb: var(--amber-rgb);
+  text-align: left;
+}
 .sc[data-ch='organic'] { --acc: var(--mint); --acc-soft: var(--mint-soft); --acc-rgb: var(--mint-rgb); }
 
 /* No margin-top and no max-width: the hero's aside owns the gap above this, and
    the aside column is the measure. Both were section-era values. */
 .sc__panel {
+  position: relative;
+  /* Keeps the channel accent inside the radius. */
+  overflow: hidden;
   padding: 26px 26px 22px;
   border: 1px solid var(--line);
   border-radius: 24px;
   background: var(--panel);
   box-shadow: var(--lift-3);
+}
+
+/* The channel accent, in the same language #coverage's panels and #method's step
+   cards use: a 3px rule across the top in the channel's colour. It retints with
+   the Paid/Organic toggle, so the panel itself answers "which channel am I
+   looking at" before the tab does. */
+.sc__panel::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    var(--acc),
+    rgba(var(--acc-rgb), 0.15) 70%,
+    transparent
+  );
 }
 
 .sc__top {
@@ -61,10 +95,12 @@
 .sc__head {
   display: flex;
   align-items: baseline;
-  gap: 12px;
+  /* Row gap 3, not 12: the sub wraps to its own line on a phone, and a 12px row
+     gap under a 17px name read as two unrelated blocks. */
+  gap: 3px 12px;
   flex-wrap: wrap;
-  margin-top: 18px;
-  padding-bottom: 18px;
+  margin-top: 16px;
+  padding-bottom: 16px;
   border-bottom: 1px solid var(--line);
 }
 .sc__biz { font-family: var(--font-display); font-size: 17px; }
@@ -258,20 +294,50 @@
   .sc__ring-label strong { font-size: 31px; }
   .sc__ring-label span { font-size: 9.5px; }
 
-  .sc__minis { gap: 20px; }
+  /* Same reason as the mobile block: the two labels share a 244px rail, and at a
+     26px gap "Est. spend waste" wrapped to two lines. */
+  .sc__minis { gap: 14px; }
+  .sc__minis strong { font-size: 15px; }
+  .sc__minis span { font-size: 10px; letter-spacing: -0.005em; }
 }
 
 @media (max-width: 899px) {
-  .sc__panel { margin-top: 30px; padding: 20px 18px 18px; border-radius: 18px; }
-  .sc__top { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .sc__panel { padding: 20px 18px 18px; border-radius: 18px; }
+  .sc__top { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .sc__head { margin-top: 12px; padding-bottom: 14px; }
+  .sc__biz { font-size: 16px; }
+
+  /* Ring and verdict side by side rather than stacked. A 118px ring on its own
+     row above the flag wasted a third of the panel's height on a phone and put
+     the score a full scroll away from the sentence explaining it. */
   .sc__score {
-    grid-template-columns: 1fr;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
     justify-items: start;
-    gap: 18px;
+    gap: 16px;
+    padding: 18px 0;
   }
-  .sc__minis { gap: 18px; }
-  .sc__row-top { flex-direction: column; gap: 3px; }
-  .sc__row-note { font-size: 12px; }
+  .sc__ring svg { width: 92px; height: 92px; }
+  .sc__ring-label strong { font-size: 25px; }
+  .sc__ring-label span { font-size: 8.5px; }
+  .sc__verdict { gap: 7px; }
+  .sc__verdict p { font-size: 13px; }
+  /* The two labels sit in a ~240px column beside a 92px ring, so at an 18px gap
+     "Est. spend waste" wrapped to two lines. Tighter gap and a hair smaller keeps
+     each on one. */
+  .sc__minis { gap: 14px; }
+  .sc__minis strong { font-size: 15px; }
+  .sc__minis span { font-size: 10px; letter-spacing: -0.005em; }
+
+  /* Title and grade stay on ONE line and wrap only if they must, instead of the
+     grade always dropping to a line of its own. `column` put "FAIR · 58" under
+     "Search intent control" on every row, which made four rows read as eight and
+     was half the reason this looked loose. */
+  .sc__row-top { flex-direction: row; flex-wrap: wrap; gap: 4px 12px; }
+  .sc__row-title { font-size: 13.5px; }
+  .sc__rows { gap: 14px; padding: 16px 0 4px; }
+  .sc__row { gap: 5px; }
+  .sc__row-note { font-size: 12px; line-height: 1.45; }
 }
 
 @media (prefers-reduced-motion: reduce) {

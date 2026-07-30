@@ -1,6 +1,10 @@
 /* ==========================================================================
    SCORECARD — the audit deliverable
    Layout only. Every timing number lives in scorecard.motion.js.
+
+   NOT A SECTION ANY MORE. This was `<section class="band sc" id="scorecard">`
+   between #method and #pricing; it is now a panel inside the hero's aside,
+   directly under the SERP mock. `.sc` is a plain wrapper today, not a band.
    ========================================================================== */
 
 /* The whole section retints per channel from one place, exactly as legacy's
@@ -8,9 +12,9 @@
 .sc { --acc: var(--amber); --acc-soft: var(--amber-soft); --acc-rgb: var(--amber-rgb); }
 .sc[data-ch='organic'] { --acc: var(--mint); --acc-soft: var(--mint-soft); --acc-rgb: var(--mint-rgb); }
 
+/* No margin-top and no max-width: the hero's aside owns the gap above this, and
+   the aside column is the measure. Both were section-era values. */
 .sc__panel {
-  margin-top: 44px;
-  max-width: 820px;
   padding: 26px 26px 22px;
   border: 1px solid var(--line);
   border-radius: 24px;
@@ -214,34 +218,47 @@
 
 /* -------------------------------------------------------------- responsive */
 
-/* Wide: the panel spans the shell and splits into an instrument rail plus the
-   graded rows. Below this it stays the single 820px column above — at 900-1079px
-   a 296px rail would squeeze the row notes to three lines each. */
-@media (min-width: 1080px) {
-  .sc__panel { max-width: none; padding: 28px 30px 24px; }
+/* THE TWO-COLUMN BODY, and the query is now a CONTAINER query on purpose.
+
+   It used to be `@media (min-width: 1080px)` — the panel spanned the whole shell,
+   so viewport width and panel width were the same thing. In the hero the panel is
+   ~650px inside a 1360px page, so a viewport query would have forced the wide
+   layout into half the width it was measured for. Worse, the single-column
+   fallback made the panel 676-779px tall, which does not fit a hero that also
+   carries a 400px SERP mock.
+
+   Keyed to the panel's own inline size, the layout follows the box rather than
+   the window: two columns wherever there are 600px to split, one column below.
+   Container queries are Chrome 105+, Safari 16+, Firefox 110+; older engines get
+   the single-column stack, which is correct, just taller. */
+@container sc-panel (min-width: 600px) {
+  .sc__panel { padding: 24px 26px 20px; }
 
   .sc__body {
     display: grid;
-    grid-template-columns: 300px minmax(0, 1fr);
+    /* 244px rail, down from 300. At 650px total a 300px rail left 320px for the
+       rows and every note wrapped to three lines. */
+    grid-template-columns: 244px minmax(0, 1fr);
   }
 
   /* The divider turns vertical: one border does the job both ways. */
   .sc__score {
     grid-template-columns: 1fr;
     justify-items: start;
-    gap: 22px;
-    padding: 26px 34px 8px 0;
+    gap: 16px;
+    padding: 20px 24px 6px 0;
     border-bottom: 0;
     border-right: 1px solid var(--line);
   }
-  .sc__rows { padding: 26px 0 6px 34px; }
+  .sc__rows { padding: 20px 0 4px 24px; gap: 13px; }
 
-  /* The ring carries the section at this width, so it gets the room. */
-  .sc__ring svg { width: 146px; height: 146px; }
-  .sc__ring-label strong { font-size: 38px; }
-  .sc__ring-label span { font-size: 10.5px; }
+  /* The ring is the panel's headline number, but in a 244px rail it cannot be
+     the 146px it was when this spanned a 1200px shell. */
+  .sc__ring svg { width: 116px; height: 116px; }
+  .sc__ring-label strong { font-size: 31px; }
+  .sc__ring-label span { font-size: 9.5px; }
 
-  .sc__minis { gap: 30px; }
+  .sc__minis { gap: 20px; }
 }
 
 @media (max-width: 899px) {
@@ -260,3 +277,35 @@
 @media (prefers-reduced-motion: reduce) {
   .sc__tab { transition: none; }
 }
+
+
+/* --------------------------------------------------------------------------
+   THE CONTAINER
+
+   Declared on the wrapper rather than the panel itself: an element cannot be
+   queried by a container query it establishes. `inline-size` and not `size`
+   because only the width is being asked about, and `size` would force the panel
+   to have its own block size, which it does not.
+   -------------------------------------------------------------------------- */
+
+.sc {
+  container: sc-panel / inline-size;
+}
+
+/* --------------------------------------------------------------------------
+   IN THE HERO
+
+   Tightened against the standalone version: this panel now shares a column with
+   a 400px SERP mock inside a stage that has to stay hero-sized. Type scale is
+   untouched — only spacing and the ring.
+   -------------------------------------------------------------------------- */
+
+.hero__aside .sc__panel {
+  border-radius: 18px;
+  box-shadow: var(--lift-3);
+}
+
+.hero__aside .sc__head { margin-top: 14px; padding-bottom: 14px; }
+.hero__aside .sc__foot { margin-top: 12px; padding-top: 11px; }
+.hero__aside .sc__verdict p { font-size: 13px; }
+.hero__aside .sc__row-note { font-size: 12px; }

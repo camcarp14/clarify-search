@@ -9,7 +9,6 @@ import Diagnosis from './components/Diagnosis/Diagnosis'
 import Coverage from './components/Coverage/Coverage'
 import AiVisibility from './components/AiVisibility/AiVisibility'
 import Method from './components/Method/Method'
-import Scorecard from './components/Scorecard/Scorecard'
 import Pricing from './components/Pricing/Pricing'
 import AiBuild from './components/AiBuild/AiBuild'
 import Why from './components/Why/Why'
@@ -24,6 +23,12 @@ import Footer from './components/Contact/Footer'
  * sections may be DOM-adjacent" rule is satisfied by this arrangement
  * (Hero → Marquee, Diagnosis, Coverage → AiVisibility → Method, Pricing →
  * AiBuild). Reordering can silently create adjacent pins.
+ *
+ * The account scorecard is NOT in this list. It sits inside the hero, under the
+ * SERP mock — see ScorecardPanel.jsx for why. It was briefly a section between
+ * Method and Pricing; #method step 02 still names the artifact
+ * ("ARTIFACT: SCORECARD, THEN FULL REPORT"), which is now a back-reference to
+ * something the reader has already been shown at the top of the page.
  *
  * tabIndex={-1} on <main> makes it a valid skip-link target so focus actually
  * lands there rather than staying on the link.
@@ -84,11 +89,6 @@ export default function App() {
         <Coverage />
         <AiVisibility />
         <Method />
-        {/* Directly after Method on purpose: its step 02 promises exactly this
-            artifact ("ARTIFACT: SCORECARD, THEN FULL REPORT"), and it sits
-            before Pricing so the reader sees the deliverable before the price.
-            Restored from the legacy hero, which the first port dropped. */}
-        <Scorecard />
         <Pricing />
         <AiBuild />
         <Why />

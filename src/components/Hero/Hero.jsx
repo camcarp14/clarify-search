@@ -5,13 +5,26 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { SplitText } from 'gsap/SplitText'
 import { MOTION, MOBILE_QUERY, DESKTOP_QUERY } from './hero.motion'
 import { QUERY, ROWS, VERDICT_LABEL } from './heroSerp'
-import { counter as makeCounter, setIf } from '../../motion/system'
+import ScorecardPanel from '../Scorecard/ScorecardPanel'
+import { setIf } from '../../motion/system'
 import { DEBUG } from '../../lib/motionDebug'
 import './Hero.css'
 
 gsap.registerPlugin(ScrollTrigger, SplitText)
 
-const { seq, pin, intro, counter } = MOTION
+const { seq, pin, intro } = MOTION
+
+/**
+ * When the scorecard reveals, in seconds from load.
+ *
+ * The SERP sequence starts at `intro.startDelay + intro.sequenceGap` and runs for
+ * `sequenceSeconds`. Landing the scorecard at ~62% of that puts it on screen
+ * while the strike is wiping — so the reader sees the problem being marked and
+ * the deliverable arriving as one thought, instead of watching a finished panel
+ * sit there through the whole sequence.
+ */
+const SCORECARD_DELAY =
+  MOTION.intro.startDelay + MOTION.intro.sequenceGap + MOTION.sequenceSeconds * 0.62
 
 /** Framer Motion is scoped to component-level micro-interaction only — the
  *  scroll work is entirely GSAP's. */
@@ -29,8 +42,6 @@ export default function Hero() {
   const queryRef = useRef(null)
   const caretRef = useRef(null)
   const railRef = useRef(null)
-  const counterRef = useRef(null)
-  const counterLineRef = useRef(null)
   const replayRef = useRef(null)
   const resolveRef = useRef(null)
 
@@ -80,12 +91,6 @@ export default function Hero() {
             charsClass: 'hero__qchar',
           })
 
-          const readout = makeCounter({
-            el: counterRef.current,
-            to: counter.to,
-            suffix: counter.suffix,
-          })
-
           let detachReplay = null
           const cleanup = () => {
             split.revert()
@@ -108,8 +113,7 @@ export default function Hero() {
             // has to carry the whole argument; see seq.cull.
             setIf(strike, { scaleX: 1 })
             setIf(leakRow, { opacity: seq.cull.dimOpacity })
-            setIf([counterLineRef.current, ...resolveItems], { opacity: 1, y: 0 })
-            readout.set()
+            setIf(resolveItems, { opacity: 1, y: 0 })
             // No replay affordance under reduced motion: there is no sequence to
             // replay, and offering one would promise motion the user opted out of.
             if (replayRef.current) replayRef.current.hidden = true
@@ -127,10 +131,7 @@ export default function Hero() {
           setIf(marks, { opacity: 0, x: seq.mark.labelFromX })
           setIf(railRef.current, { scaleY: 0 })
           setIf(strike, { scaleX: 0 })
-          setIf([counterLineRef.current, ...resolveItems], {
-            opacity: 0,
-            y: seq.resolve.copyFromY,
-          })
+          setIf(resolveItems, { opacity: 0, y: seq.resolve.copyFromY })
 
           /* ---------------- INTRO — once, on load ---------------- */
           const eyebrow = root.querySelector('.hero__eyebrow')
@@ -286,24 +287,10 @@ export default function Hero() {
            * looking at in the resting frame. It used to fade out here, because
            * the row it pointed at was leaving. */
 
-          /* ---- 0.78 → 1.00 · counter, copy, unpin ---- */
+          /* ---- 0.78 → 1.00 · the copy and CTAs land ----
+           * The 18% counter used to run here. It went with the callout — the
+           * scorecard in the aside carries that number now, on its own clock. */
           const rs = seq.resolve
-          tl.to(
-            counterLineRef.current,
-            { opacity: 1, y: 0, duration: 0.25, ease: rs.ease, immediateRender: false },
-            at(rs.start),
-          )
-          tl.fromTo(
-            readout.readout,
-            readout.from,
-            {
-              ...readout.to,
-              duration: dur(rs.start, rs.counterEnd),
-              ease: rs.counterEase,
-              immediateRender: false,
-            },
-            at(rs.start),
-          )
           tl.to(
             resolveItems,
             {
@@ -380,18 +367,23 @@ export default function Hero() {
     <section className="hero" id="top" ref={rootRef} aria-labelledby="heroTitle">
       <div className="hero__stage" ref={stageRef}>
         <div className="hero__content">
-          {/* TWO COLUMN WRAPPERS, and they exist to kill a hole.
-              The four blocks used to be direct grid children placed by
-              `grid-template-areas`, which put the panel and the headline in the
-              same row — so the row sized to the taller panel and the left column
-              got the difference as dead paper between the headline and the stat:
-              88px at a tall window, 165px at a short one.
+          {/* FOUR DIRECT CHILDREN, placed by grid-template-areas above 1240px:
 
-              Wrapped, the two columns are siblings that centre against each other
-              and neither can stretch the other's internals. Below 1240px both
-              wrappers go `display: contents` and the four blocks return to being
-              grid children in the single-column order — see Hero.css. */}
-          <div className="hero__col">
+                  headline | copy + CTAs
+                  SERP mock| scorecard
+
+              The two artifacts sit side by side, which is the point — the mock
+              states the problem (a click bought on a term already ranked #1) and
+              the scorecard states what comes back for it.
+
+              This replaced a version that stacked both artifacts in one column.
+              That made the hero 1,150px tall and put a 500px hole in the left
+              column, because a 480px stack of copy was being centred against a
+              1,000px stack of panels. Side by side the tallest row is the
+              scorecard's 561px and the hero is ~850px.
+
+              No wrapper elements and no `display: contents`: all four are direct
+              children, so the single-column case below is just `order`. */}
             <div className="hero__top">
               <span className="hero__eyebrow">
                 <span className="hero__dot hero__dot--a" aria-hidden="true" />
@@ -407,16 +399,12 @@ export default function Hero() {
               </h1>
             </div>
 
+            {/* The "18% · Est. spend waste" callout that used to sit here is
+                gone. It was the same figure as the scorecard's first mini-stat,
+                so the hero was quoting one cell of an artifact that lived 8,000px
+                further down the page. The scorecard is in the aside now and the
+                number is in it. */}
             <div className="hero__resolve" ref={resolveRef}>
-              <p className="hero__counter-line" ref={counterLineRef}>
-                <span className="hero__counter" ref={counterRef}>
-                  0%
-                </span>
-                <span className="hero__counter-label">
-                  Est. spend waste · example account
-                </span>
-              </p>
-
               <p className="hero__copy" data-resolve-item>
                 Clarify audits how your business shows up in Google —{' '}
                 <strong>paid ads, organic rankings, and AI answers</strong> — then
@@ -432,7 +420,6 @@ export default function Hero() {
                   See how it works
                 </motion.a>
               </div>
-            </div>
           </div>
 
           <div className="hero__aside">
@@ -524,7 +511,13 @@ export default function Hero() {
               </span>
               Replay
             </button>
+
           </div>
+
+          {/* THE DELIVERABLE, beside the problem. This used to be its own section
+              8,000px down the page, quoting the same 18% the hero had already
+              spent as a one-line callout. */}
+          <ScorecardPanel delay={SCORECARD_DELAY} />
         </div>
       </div>
     </section>

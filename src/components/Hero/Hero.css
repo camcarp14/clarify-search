@@ -18,36 +18,14 @@
 
 .hero__stage {
   position: relative;
-  /* NOT 100vh, and that is the fix for most of the hero's empty space.
-     The composition is a roughly fixed ~450-550px block; pinning the stage to
-     the viewport meant the taller the window, the emptier the hero got — it
-     filled 57% of a 788px viewport and only 44% of a 1250px one, with 370px of
-     dead paper above the eyebrow and 325 below the CTAs.
-
-     clamp() sizes the stage to the composition instead: a 600px floor so it
-     never crushes on a short laptop, 82vh so it still dominates the first
-     screen, and an 820px ceiling so a tall monitor stops adding slack the
-     content has no way to use. The ceiling is the cheap way to buy fill — the
-     alternative was a bigger headline, and above 56px this one wraps to five
-     lines and breaks before its em dash.
-
-     Falling short of the viewport is deliberate. The marquee below now peeks in
-     at the bottom edge, which is a scroll invitation the 100vh version could
-     never give — a hero that exactly fills the screen tells the reader there is
-     nothing under it. */
-  /* Full viewport in the SINGLE-COLUMN case, and that is not a leftover: stacked,
-     the composition is headline + panel + replay + stat + copy + CTAs and it needs
-     every pixel. The first version of the clamp below was unscoped and cut 152px
-     off a 390x844 phone, which `overflow: clip` turned into a SERP panel sliced
-     off below its omnibox. */
-  /* MIN-height, not height, in the single-column case. Stacked, the composition
-     is headline + panel + replay + stat + copy + CTAs; forcing all six into one
-     viewport is what squeezed the SERP panel down to 212px and cut the last
-     result's title in half. The replay control was the last straw — it added a
-     fourth grid row and took ~50px off the panel.
-     Letting the hero run past the fold on a phone costs a small scroll before the
-     CTAs and buys a legible artifact, which is the trade to make: the artifact is
-     the argument. Above 1240px the two-column block clamps this to a real height. */
+  /* MIN-height, and only in the SINGLE-COLUMN case. Stacked, the composition is
+     headline + SERP mock + replay + scorecard + copy + CTAs, and forcing that
+     into one viewport is what squeezed the mock down to 212px with the last
+     result's title cut in half. Letting the hero run past the fold on a phone
+     costs a small scroll before the CTAs and buys legible artifacts, which is
+     the right trade: the artifacts are the argument.
+     Above 1240px the two-column block clamps this to a real height — see the
+     `min-height: 0` there, which is load-bearing. */
   min-height: 100vh;
   overflow: clip;
 }
@@ -68,8 +46,8 @@
   display: grid;
   /* SINGLE-COLUMN track list. Four rows because the two column wrappers go
      `display: contents` here (see the responsive block), so the grid's children
-     are the four leaf blocks: headline, panel, replay, copy — in that visual
-     order, set with `order` below.
+     are the four blocks: headline, the mock + replay group, the scorecard, and
+     the copy — in that visual order, set with `order` below.
      minmax(0, 1fr) on the panel's row: a bare `1fr` floors at the panel's
      intrinsic height, so the panel refused to shrink and pushed into the
      headline and the copy at every viewport. This lets that row actually be the
@@ -382,33 +360,6 @@
   max-width: 640px;
 }
 
-.hero__counter-line {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
-.hero__counter {
-  font-family: var(--font-display);
-  font-size: clamp(28px, 3vw, 40px);
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: -0.03em;
-  color: var(--red);
-  font-variant-numeric: tabular-nums;
-}
-
-.hero__counter-label {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--muted-2);
-}
-
 .hero__copy {
   font-size: 16.5px;
   color: var(--muted);
@@ -454,101 +405,52 @@
    -------------------------------------------------------------------------- */
 
 @media (min-width: 1240px) {
-  /* Sized to the composition, not to the viewport — the fix for most of the
-     hero's empty space. The two-column composition is a roughly fixed 460-565px
-     block, so pinning the stage to 100vh meant the taller the window the emptier
-     the hero got: it filled 57% of a 788px viewport and 44% of a 1250px one, with
-     370px of dead paper above the eyebrow and 325 below the CTAs.
-
-     600px floor so a short laptop is not crushed, 82vh so it still dominates the
-     first screen, 820px ceiling so a tall monitor stops adding slack the content
-     has no way to use. Now 69-71%.
-
-     Falling short of the viewport is deliberate. The marquee below peeks in at the
-     bottom edge, which is a scroll invitation 100vh could never give — a hero that
-     exactly fills the screen tells the reader there is nothing under it. */
   .hero__stage {
-    /* `min-height: 0` is load-bearing. The base rule sets `min-height: 100vh` for
-       the stacked case, and min-height ALWAYS wins over height — leaving it in
-       place made this clamp a no-op and put the stage straight back to a full
-       viewport (58% fill at 1460x788 instead of 70%). */
-    min-height: 0;
-    height: clamp(600px, 82vh, 820px);
+    /* MIN-height with `height: auto`. The hero carries two artifacts now, so a
+       hard height clipped them: an 820px stage against a taller composition put
+       the SERP mock at y: -119, sliced by `overflow: clip`. The clamp is a floor
+       — the hero still claims 82vh of the first screen and grows past it when the
+       artifacts need the room. */
+    min-height: clamp(600px, 82vh, 820px);
+    height: auto;
   }
 
   .hero__content {
     max-width: var(--max);
-    grid-template-columns: 1fr 1.04fr;
-    /* ONE row. The two wrappers are the only children, so there is nothing to
-       stretch: each column sizes to its own content and `align-items: center`
-       balances them against each other. The previous version used two rows plus
-       grid-template-areas, which put the panel in the same row as the headline
-       and left the difference as a hole in the left column. */
-    grid-template-rows: auto;
+    /* A 2x2: argument on top, artifacts underneath.
+         headline  | copy + CTAs
+         SERP mock | scorecard  */
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto;
+    /*  headline   | copy + CTAs
+        SERP mock  | scorecard
+       Argument across the top, artifacts across the bottom. The alternative was
+       stacking both artifacts in the right column, which made the hero 1,150px
+       tall and left a 500px hole in the left column — a 480px stack of copy
+       centred against a 1,000px stack of panels. */
+    grid-template-areas:
+      'head copy'
+      'mock card';
     align-content: center;
-    align-items: center;
+    align-items: start;
     justify-items: stretch;
     text-align: left;
-    column-gap: clamp(40px, 4vw, 72px);
-    row-gap: 0;
+    column-gap: clamp(32px, 3vw, 56px);
+    row-gap: clamp(26px, 3.4vh, 44px);
   }
 
-  /* Each column owns its own vertical rhythm. */
-  .hero__col {
-    display: grid;
-    gap: clamp(22px, 3.6vh, 44px);
-    align-content: center;
-    justify-items: start;
-  }
+  .hero__top { grid-area: head; align-items: flex-start; }
+  .hero__resolve { grid-area: copy; align-items: flex-start; align-self: end; max-width: 46ch; }
+  .hero__aside { grid-area: mock; }
+  .sc { grid-area: card; }
 
-  .hero__aside {
-    display: grid;
-    gap: 14px;
-    align-content: center;
-    justify-items: start;
-  }
-
-  .hero__top { align-items: flex-start; }
-  .hero__resolve { align-items: flex-start; max-width: 46ch; }
-  .hero__counter-line,
   .hero__actions { justify-content: flex-start; }
   .hero__replay { margin-top: 0; }
 
-  /* No max-width: the grid column IS the measure. A `ch` cap was 19 characters
-     of the fallback metric and came out ~13 characters of Space Grotesk at 62px,
-     which pushed this to five lines and broke one of them before the em dash so
-     "— the clicks" started a line. The full column sets it in four. */
-  /* 56px is the ceiling for FOUR lines in this column. 64 was tried to fill more
-     height and pushed it to five, breaking before the em dash so "— the clicks"
-     opened a line again. Height is cheaper to buy from the stage cap below than
-     from a headline that wraps badly. */
-  .hero__headline { font-size: clamp(44px, 3.3vw, 56px); max-width: none; }
+  .hero__headline { font-size: clamp(40px, 3.1vw, 52px); max-width: none; }
 
-  .hero__serp {
-    /* Fills its column rather than capping at 700px. The panel IS the argument
-       the headline makes; at 700px in a 1360px shell it read as a thumbnail. */
-    width: 100%;
-    /* Never taller than the stage, which `overflow: clip` on .hero would
-       otherwise have to crop. */
-    max-height: 74vh;
-  }
-
-  /* THE PANEL GETS REAL SIZE — the other half of closing the empty space.
-     Shrinking the stage alone leaves the composition small; the artifact has to
-     grow into it. Every value here is the mobile value scaled up, and only above
-     1240px, so the phone layout is untouched. The panel goes from 332px to
-     roughly 430px, which is most of the height the stage no longer wastes.
-
-     A 656px-wide panel setting 14px result titles and 9px tags was reading as a
-     screenshot of a screenshot. These are the sizes a real results row uses. */
-  .hero__serp-row { padding: 15px 22px 15px 26px; gap: 5px; }
-  .hero__serp-title { font-size: 16.5px; }
-  .hero__serp-note { font-size: 12.5px; }
-  .hero__serp-url { font-size: 11.5px; }
-  .hero__serp-tag { font-size: 9.5px; }
-  .hero__serp-bar { padding: 14px 18px; }
-  .hero__serp-omni { font-size: 12px; padding: 9px 15px; }
-  .hero__serp-verdict { font-size: 9.5px; }
+  .hero__aside { display: grid; gap: 12px; justify-items: start; align-content: start; }
+  .hero__serp { width: 100%; }
 }
 
 /* --------------------------------------------------------------------------
@@ -574,7 +476,6 @@
      where most of the reclaimed height comes from. */
   .hero__headline { font-size: clamp(28px, 2.9vw, 42px); max-width: 32ch; }
   .hero__resolve { gap: 10px; }
-  .hero__counter { font-size: clamp(26px, 2.4vw, 32px); }
   .hero__copy { font-size: 15px; }
   .hero__serp-row { padding: 9px 16px 9px 20px; }
   .hero__serp-bar { padding: 9px 12px; }
@@ -657,6 +558,16 @@
    stays inert; this and the CTAs are the two things that opt back in.
    -------------------------------------------------------------------------- */
 
+/* THE SCORECARD IS INTERACTIVE, so it has to opt back in.
+   `.hero__content` sets `pointer-events: none` so the SERP mock stays inert;
+   the CTAs and the replay control opt back in individually. The scorecard
+   arrived as a new child and did not, which left its Paid/Organic tabs dead to
+   the mouse — the stage swallowed every click. Keyboard still worked, which is
+   exactly why this needed a click test to catch. */
+.hero__content .sc {
+  pointer-events: auto;
+}
+
 .hero__replay {
   justify-self: start;
   display: inline-flex;
@@ -718,19 +629,21 @@
    at the bottom of a stack of copy. In two columns it is placed by the grid
    (see the wide block above), so this only has to handle the centred case. */
 /* SINGLE COLUMN.
-   `display: contents` dissolves both wrappers so the four leaf blocks become
-   grid children again, and `order` restores the single-column reading:
-   headline, then the artifact it is about, then a way to replay it, then the
-   pitch. Without the order overrides the DOM sequence would put the copy and
-   CTAs above the artifact, because .hero__col holds both. */
+   All four blocks are direct grid children at every width, so this is only an
+   ordering question: headline, then the artifact it is about, then a way to
+   replay it, then the deliverable, then the pitch. The `.hero__replay` lives
+   inside `.hero__aside` so it travels with the mock. */
 @media (max-width: 1239px) {
-  .hero__col,
-  .hero__aside { display: contents; }
-
   .hero__top { order: 1; }
-  .hero__serp { order: 2; }
-  .hero__replay { order: 3; justify-self: center; margin-top: 2px; }
-  .hero__resolve { order: 4; }
+  .hero__aside { order: 2; display: grid; gap: 10px; justify-items: center; }
+  /* Copy and CTAs BEFORE the scorecard here, which inverts the desktop reading.
+     Stacked, the scorecard's body collapses to one column and the panel is
+     1,044px tall — putting it third pushed "Get a free leak check" to y:1695 on
+     a 390x844 phone. Two screens of artifact before the only button on the page
+     is the wrong trade; on desktop they sit side by side and the question does
+     not arise. */
+  .hero__resolve { order: 3; }
+  .sc { order: 4; width: 100%; }
 }
 
 /* A 33px pill clears the pointer bar but not the touch one. 42px is the floor
@@ -747,7 +660,6 @@
   .hero__replay:hover,
   .hero__replay:active { transform: none; }
 }
-
 
 /* --------------------------------------------------------------------------
    WIDE AND SHORT — the two-column layout does not need the height savings

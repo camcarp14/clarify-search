@@ -388,12 +388,87 @@
 }
 
 /* --------------------------------------------------------------------------
+   WIDE VIEWPORTS — the two-column composition
+
+   Above 1240px the hero stops being a centred column and becomes copy-left /
+   artifact-right. This is the single biggest change to how the page reads, and
+   the reason is arithmetic: at a 2000px window the centred version put a 1120px
+   content box in the middle with 440px of dead paper down each side, and inside
+   that box a 700px panel with another 210px of air around it. Roughly half the
+   screen was doing nothing, which is exactly the "bunch of open space" it looked
+   like.
+
+   Two columns spend all of it: the headline gets a narrower measure so it sets
+   in three strong lines instead of two wide ones, the stat and CTAs sit
+   directly under it where the eye already is, and the artifact gets a full
+   column of its own at the size it deserves.
+
+   Placed with grid-template-areas, NOT by reordering the DOM. Source order is
+   top → panel → resolve, which is the order a screen reader and a
+   prerendered/JS-off page should read; the panel is aria-hidden decoration and
+   must not come between the headline and the copy that explains it. Areas let
+   the visual arrangement differ from that without touching the markup.
+
+   1240px, not 1080: between the two the columns are narrow enough that the
+   headline sets in five lines and the panel loses the omnibox — the centred
+   version is genuinely better there.
+   -------------------------------------------------------------------------- */
+
+@media (min-width: 1240px) {
+  .hero__content {
+    max-width: var(--max);
+    grid-template-columns: 1fr 1.04fr;
+    /* Both rows auto, and align-content centres the PAIR in the 100vh stage.
+       The old `minmax(0, 1fr)` middle row existed to give the panel the
+       leftover height in a single column; in two columns the panel is bounded
+       by its own column instead. */
+    grid-template-rows: auto auto;
+    grid-template-areas:
+      'top   panel'
+      'copy  panel';
+    align-content: center;
+    align-items: start;
+    justify-items: start;
+    text-align: left;
+    column-gap: clamp(40px, 4vw, 72px);
+    row-gap: clamp(18px, 3vh, 34px);
+  }
+
+  .hero__top { grid-area: top; align-items: flex-start; }
+  .hero__resolve { grid-area: copy; align-items: flex-start; max-width: 46ch; }
+  .hero__counter-line,
+  .hero__actions { justify-content: flex-start; }
+
+  /* A narrower measure than the single-column 24ch: four lines of large type is
+     a stronger left column than two that run the full width. 19ch and not 17 —
+     at 17 the line broke before the em dash, so "— the clicks" started a line,
+     which reads as a dropped fragment rather than a break. */
+  .hero__headline { font-size: clamp(44px, 3.6vw, 62px); max-width: 19ch; }
+
+  .hero__serp {
+    grid-area: panel;
+    /* Fills its column rather than capping at 700px. The panel IS the argument
+       the headline makes; at 700px in a 1360px shell it read as a thumbnail. */
+    width: 100%;
+    align-self: center;
+    /* It spans both rows, so it can be taller than either — but never taller
+       than the stage, which is what `overflow: clip` on .hero would otherwise
+       have to crop. */
+    max-height: 76vh;
+  }
+}
+
+/* --------------------------------------------------------------------------
    SHORT VIEWPORTS
 
-   The hero is pinned, so everything has to fit one viewport — there is no
-   scrolling past a too-tall composition. A 1366x768 laptop has ~230px of room
-   for a panel that wants 346, and `max-height` only clipped it. Height is a
-   first-class breakpoint here, not an afterthought.
+   Everything has to fit one viewport — the hero is 100vh with `overflow: clip`,
+   so there is no scrolling past a too-tall composition. A 1366x768 laptop has
+   ~230px of room for a panel that wants 346, and `max-height` only clipped it.
+   Height is a first-class breakpoint here, not an afterthought.
+
+   NOTE ON ORDER: this block and the wide block above overlap at, say, 1440x800.
+   It is written second on purpose so its height-driven type sizes win — a short
+   wide window needs the smaller headline more than it needs the big one.
    -------------------------------------------------------------------------- */
 
 @media (min-width: 900px) and (max-height: 900px) {

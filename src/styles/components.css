@@ -102,14 +102,22 @@ section.band.tinted {
   align-items: end;
   margin-bottom: 44px;
 }
+/* Cap raised 54 → 66. At 4vw the cap is what binds on anything over 1350px, so
+   every section heading on a wide monitor was setting at 54px inside a 700px
+   column — small type in a big space, which reads as a page that has not been
+   scaled up rather than as restraint. 66px fills the column and makes the
+   headline the thing it is supposed to be. The 31px floor is untouched. */
 .section-head h2 {
-  font-size: clamp(31px, 4vw, 54px);
+  font-size: clamp(31px, 4vw, 66px);
   letter-spacing: -.035em;
 }
 .section-head > p {
-  font-size: 16px;
+  /* 17px / 52ch, up from 16 / 46. The lede is the only body copy in the head and
+     it sits alone against a 66px headline; at 16px in a 46ch measure it read as
+     a caption. */
+  font-size: 17px;
   color: var(--muted);
-  max-width: 46ch;
+  max-width: 52ch;
   justify-self: end;
   /* The grid is `align-items: end`, which bottom-aligned this paragraph to a
      four-line headline and left ~170px of dead paper directly above it. Centred

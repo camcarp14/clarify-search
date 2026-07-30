@@ -38,7 +38,11 @@
   --red: #b32d1f;
   --red-rgb: 184, 56, 43;
 
-  --max: 1200px;
+  /* 1360, up from legacy's 1200. On a 2000px window 1200 left 400px of margin
+     down each side, and that margin was reading as the page having run out. Every
+     section is a fluid grid, so the extra 160px lands in the content rather than
+     in a gutter. Verified for overflow at 2560/1920/1440/1366/1240/1080/390. */
+  --max: 1360px;
   --pad: 72px;
 
   --font-display: "Space Grotesk", Inter, system-ui, sans-serif;

@@ -61,27 +61,19 @@
 .why-cards {
   display: grid;
   gap: 16px;
-  /* Two cards of copy measured 284px against a 354px copy column, leaving 70px
-     of blank paper below them. Equal fractions let them stretch to close it, so
-     the two columns end on the same line — which is what `align-items: start`
-     on .why-grid was always trying to say.
-     Counter for the ordinals below; the height matching is in the media query
-     underneath, and the reason it is scoped there matters. */
+  /* Counter for the ordinals below. */
   counter-reset: whycard;
-}
 
-/* MATCHED CARD HEIGHTS — desktop only, and the breakpoint is load-bearing.
-   In an auto-height grid a `1fr` row resolves to the tallest row's content, so
-   the two-line card grows to the three-line card's height and the column ends
-   level with the copy beside it. That is worth 48px of the 70px gap.
-   Below 1080px `.why-grid` collapses to one column (see the responsive block
-   at the bottom of this file), so there is no second column left to end level
-   WITH — and the copy wraps harder at those widths, which widens the height
-   difference. Matching heights there just relocates the hole to the inside of
-   the short card, which is worse than an uneven bottom edge nobody can see.
-   Same reasoning applies to #ai-visibility's .ai-cards. */
-@media (min-width: 1081px) {
-  .why-cards { grid-auto-rows: 1fr; }
+  /* NO `grid-auto-rows: 1fr` HERE, and that is a deliberate reversal.
+     It was added to force the two cards to a matching height so the column
+     would end level with the copy beside it, back when the shell was 1200px and
+     the copy column ran 70px longer. At --max 1360 the copy column packs its
+     pills into fewer rows and the natural gap is down to 26px — while the height
+     difference between the two cards is 22px, all of which the equalisation
+     moves INSIDE the short card as a hole under its paragraph.
+     Measured at 2000/1600/1440/1240/1081: it is a no-op at 1240, and at 1081 it
+     overshoots and makes the card column 18px TALLER than the copy. A ragged
+     bottom edge nobody looks at beats a hole in the middle of a card. */
 }
 
 .why-card {

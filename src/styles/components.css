@@ -383,12 +383,23 @@ h2 .ital {
 }
 .reveal.in { opacity: 1; transform: none; filter: none; }
 
-/* Headings wipe up out of a mask instead of just fading — the one motion that
-   makes the page feel authored rather than templated. clip-path is composited;
-   this is not a layout animation. `.contact-copy h2` is #contact-owned but the
-   rule has always lived with the reveal system. */
-.section-head h2,
-.contact-copy h2 {
+/* Headings wipe up out of a mask instead of just fading.
+   SCOPED TO .reveal, and that scoping is the whole point.
+
+   This used to be an UNCONDITIONAL `.section-head h2 { clip-path: inset(0 0 106% 0) }`
+   whose only escape was `.reveal.in h2`. Since the legacy reveal system is
+   retired and nothing in src/ adds `.reveal` any more, every `.section-head h2`
+   on the site was clipped to nothing by default. Six sections each discovered
+   that independently and wrote their own `clip-path: none` — AiBuild,
+   AiVisibility, Contact, Coverage, Diagnosis, Method — and the seventh section
+   added after them shipped with an invisible heading, because the trap is
+   invisible until you hit it.
+
+   Scoped to `.reveal`, a `.section-head` that does not opt in is never clipped,
+   so the default is "visible" and the per-section overrides are redundant
+   rather than load-bearing. */
+.section-head.reveal h2,
+.contact-copy.reveal h2 {
   clip-path: inset(0 0 106% 0);
   transition: clip-path 1.05s var(--e-out) .06s;
 }
@@ -458,7 +469,7 @@ h2 .ital {
   .mag { transform: none !important; }
 
   .reveal { opacity: 1; transform: none; filter: none; transition: none; }
-  .section-head h2,
-  .contact-copy h2 { clip-path: none; transition: none; }
+  .section-head.reveal h2,
+  .contact-copy.reveal h2 { clip-path: none; transition: none; }
   .reveal.stagger > * { opacity: 1; transform: none; filter: none; transition: none; }
 }

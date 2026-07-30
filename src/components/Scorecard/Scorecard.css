@@ -1,0 +1,262 @@
+/* ==========================================================================
+   SCORECARD — the audit deliverable
+   Layout only. Every timing number lives in scorecard.motion.js.
+   ========================================================================== */
+
+/* The whole section retints per channel from one place, exactly as legacy's
+   #pricing does. Everything below reads --acc / --acc-soft / --acc-rgb. */
+.sc { --acc: var(--amber); --acc-soft: var(--amber-soft); --acc-rgb: var(--amber-rgb); }
+.sc[data-ch='organic'] { --acc: var(--mint); --acc-soft: var(--mint-soft); --acc-rgb: var(--mint-rgb); }
+
+.sc__panel {
+  margin-top: 44px;
+  max-width: 820px;
+  padding: 26px 26px 22px;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: var(--panel);
+  box-shadow: var(--lift-3);
+}
+
+.sc__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.sc__tabs {
+  display: inline-flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(var(--tint-rgb), 0.04);
+}
+
+.sc__tab {
+  min-height: 42px;
+  padding: 7px 16px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.18s ease, background 0.18s ease;
+}
+.sc__tab[aria-checked='true'] {
+  color: var(--bg);
+  background: var(--acc);
+}
+
+.sc__head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--line);
+}
+.sc__biz { font-family: var(--font-display); font-size: 17px; }
+.sc__sub {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted-2);
+}
+
+/* --------------------------------------------------------------- the ring */
+
+.sc__score {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 26px;
+  padding: 22px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.sc__ring { position: relative; display: grid; place-items: center; }
+.sc__ring-track {
+  fill: none;
+  stroke: rgba(var(--tint-rgb), 0.1);
+  stroke-width: 9;
+}
+.sc__ring-fill {
+  fill: none;
+  stroke: url(#scRingGrad);
+  stroke-width: 9;
+  stroke-linecap: round;
+}
+.sc__ring-label {
+  position: absolute;
+  display: grid;
+  justify-items: center;
+  line-height: 1;
+}
+.sc__ring-label strong {
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  /* Stops the number jiggling as digits change under the counter. */
+  font-variant-numeric: tabular-nums;
+}
+.sc__ring-label span {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  color: var(--muted-2);
+}
+
+.sc__verdict { display: flex; flex-direction: column; gap: 9px; }
+
+.sc__flag {
+  align-self: flex-start;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--acc-soft);
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 1px solid rgba(var(--acc-rgb), 0.4);
+  background: rgba(var(--acc-rgb), 0.09);
+}
+.sc__verdict p { font-size: 14px; line-height: 1.55; color: var(--muted); }
+
+.sc__minis { display: flex; gap: 26px; padding-top: 2px; }
+.sc__minis > div { display: grid; gap: 2px; }
+.sc__minis strong {
+  font-family: var(--font-mono);
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+}
+.sc__minis span { font-size: 11px; color: var(--muted-2); }
+.v-red { color: var(--red); }
+.v-amber { color: var(--amber-soft); }
+.v-mint { color: var(--mint-soft); }
+
+/* -------------------------------------------------------------- the rows */
+
+.sc__rows { display: grid; gap: 16px; padding: 20px 0 6px; }
+
+.sc__row { display: grid; gap: 6px; }
+
+.sc__row-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.sc__row-title { font-size: 14px; font-weight: 600; }
+.sc__row-value {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.sc__row-value.is-good { color: var(--mint-soft); }
+.sc__row-value.is-fair { color: var(--amber-soft); }
+.sc__row-value.is-poor { color: var(--red); }
+
+.sc__bar {
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(var(--tint-rgb), 0.09);
+  overflow: hidden;
+}
+/* scaleX from a left origin, so the fill is a transform and never a width
+   tween — four bars animating width would lay out on every frame. */
+.sc__bar-fill {
+  display: block;
+  height: 100%;
+  width: 100%;
+  border-radius: 999px;
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+.sc__bar-fill.is-good { background: var(--mint); }
+.sc__bar-fill.is-fair { background: var(--amber); }
+.sc__bar-fill.is-poor { background: var(--red); }
+
+.sc__row-note { font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+
+.sc__foot {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--line);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+
+.sc__line { display: block; }
+.sc__line-mask {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.12em;
+  margin-bottom: -0.12em;
+}
+
+.sc.is-live .sc__row,
+.sc.is-live .sc__bar-fill { will-change: transform, opacity; }
+
+/* -------------------------------------------------------------- responsive */
+
+/* Wide: the panel spans the shell and splits into an instrument rail plus the
+   graded rows. Below this it stays the single 820px column above — at 900-1079px
+   a 296px rail would squeeze the row notes to three lines each. */
+@media (min-width: 1080px) {
+  .sc__panel { max-width: none; padding: 28px 30px 24px; }
+
+  .sc__body {
+    display: grid;
+    grid-template-columns: 300px minmax(0, 1fr);
+  }
+
+  /* The divider turns vertical: one border does the job both ways. */
+  .sc__score {
+    grid-template-columns: 1fr;
+    justify-items: start;
+    gap: 22px;
+    padding: 26px 34px 8px 0;
+    border-bottom: 0;
+    border-right: 1px solid var(--line);
+  }
+  .sc__rows { padding: 26px 0 6px 34px; }
+
+  /* The ring carries the section at this width, so it gets the room. */
+  .sc__ring svg { width: 146px; height: 146px; }
+  .sc__ring-label strong { font-size: 38px; }
+  .sc__ring-label span { font-size: 10.5px; }
+
+  .sc__minis { gap: 30px; }
+}
+
+@media (max-width: 899px) {
+  .sc__panel { margin-top: 30px; padding: 20px 18px 18px; border-radius: 18px; }
+  .sc__top { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .sc__score {
+    grid-template-columns: 1fr;
+    justify-items: start;
+    gap: 18px;
+  }
+  .sc__minis { gap: 18px; }
+  .sc__row-top { flex-direction: column; gap: 3px; }
+  .sc__row-note { font-size: 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sc__tab { transition: none; }
+}

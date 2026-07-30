@@ -9,6 +9,7 @@ import Diagnosis from './components/Diagnosis/Diagnosis'
 import Coverage from './components/Coverage/Coverage'
 import AiVisibility from './components/AiVisibility/AiVisibility'
 import Method from './components/Method/Method'
+import Scorecard from './components/Scorecard/Scorecard'
 import Pricing from './components/Pricing/Pricing'
 import AiBuild from './components/AiBuild/AiBuild'
 import Why from './components/Why/Why'
@@ -83,6 +84,11 @@ export default function App() {
         <Coverage />
         <AiVisibility />
         <Method />
+        {/* Directly after Method on purpose: its step 02 promises exactly this
+            artifact ("ARTIFACT: SCORECARD, THEN FULL REPORT"), and it sits
+            before Pricing so the reader sees the deliverable before the price.
+            Restored from the legacy hero, which the first port dropped. */}
+        <Scorecard />
         <Pricing />
         <AiBuild />
         <Why />

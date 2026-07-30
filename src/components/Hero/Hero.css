@@ -18,8 +18,37 @@
 
 .hero__stage {
   position: relative;
-  height: 100vh;
-  min-height: 660px;
+  /* NOT 100vh, and that is the fix for most of the hero's empty space.
+     The composition is a roughly fixed ~450-550px block; pinning the stage to
+     the viewport meant the taller the window, the emptier the hero got — it
+     filled 57% of a 788px viewport and only 44% of a 1250px one, with 370px of
+     dead paper above the eyebrow and 325 below the CTAs.
+
+     clamp() sizes the stage to the composition instead: a 600px floor so it
+     never crushes on a short laptop, 82vh so it still dominates the first
+     screen, and an 820px ceiling so a tall monitor stops adding slack the
+     content has no way to use. The ceiling is the cheap way to buy fill — the
+     alternative was a bigger headline, and above 56px this one wraps to five
+     lines and breaks before its em dash.
+
+     Falling short of the viewport is deliberate. The marquee below now peeks in
+     at the bottom edge, which is a scroll invitation the 100vh version could
+     never give — a hero that exactly fills the screen tells the reader there is
+     nothing under it. */
+  /* Full viewport in the SINGLE-COLUMN case, and that is not a leftover: stacked,
+     the composition is headline + panel + replay + stat + copy + CTAs and it needs
+     every pixel. The first version of the clamp below was unscoped and cut 152px
+     off a 390x844 phone, which `overflow: clip` turned into a SERP panel sliced
+     off below its omnibox. */
+  /* MIN-height, not height, in the single-column case. Stacked, the composition
+     is headline + panel + replay + stat + copy + CTAs; forcing all six into one
+     viewport is what squeezed the SERP panel down to 212px and cut the last
+     result's title in half. The replay control was the last straw — it added a
+     fourth grid row and took ~50px off the panel.
+     Letting the hero run past the fold on a phone costs a small scroll before the
+     CTAs and buys a legible artifact, which is the trade to make: the artifact is
+     the argument. Above 1240px the two-column block clamps this to a real height. */
+  min-height: 100vh;
   overflow: clip;
 }
 
@@ -122,7 +151,9 @@
 
 .hero__serp {
   width: min(100%, 700px);
-  max-height: 100%;
+  /* No max-height here. It existed to let the panel shrink inside a hard 100vh
+     stage; with the stage on min-height the panel sizes to its rows and the last
+     result is never cropped. The two-column block sets its own cap. */
   align-self: center;
   text-align: left;
   border: 1px solid var(--line);
@@ -423,6 +454,28 @@
    -------------------------------------------------------------------------- */
 
 @media (min-width: 1240px) {
+  /* Sized to the composition, not to the viewport — the fix for most of the
+     hero's empty space. The two-column composition is a roughly fixed 460-565px
+     block, so pinning the stage to 100vh meant the taller the window the emptier
+     the hero got: it filled 57% of a 788px viewport and 44% of a 1250px one, with
+     370px of dead paper above the eyebrow and 325 below the CTAs.
+
+     600px floor so a short laptop is not crushed, 82vh so it still dominates the
+     first screen, 820px ceiling so a tall monitor stops adding slack the content
+     has no way to use. Now 69-71%.
+
+     Falling short of the viewport is deliberate. The marquee below peeks in at the
+     bottom edge, which is a scroll invitation 100vh could never give — a hero that
+     exactly fills the screen tells the reader there is nothing under it. */
+  .hero__stage {
+    /* `min-height: 0` is load-bearing. The base rule sets `min-height: 100vh` for
+       the stacked case, and min-height ALWAYS wins over height — leaving it in
+       place made this clamp a no-op and put the stage straight back to a full
+       viewport (58% fill at 1460x788 instead of 70%). */
+    min-height: 0;
+    height: clamp(600px, 82vh, 820px);
+  }
+
   .hero__content {
     max-width: var(--max);
     grid-template-columns: 1fr 1.04fr;
@@ -443,7 +496,7 @@
   /* Each column owns its own vertical rhythm. */
   .hero__col {
     display: grid;
-    gap: clamp(20px, 3.2vh, 36px);
+    gap: clamp(22px, 3.6vh, 44px);
     align-content: center;
     justify-items: start;
   }
@@ -465,7 +518,11 @@
      of the fallback metric and came out ~13 characters of Space Grotesk at 62px,
      which pushed this to five lines and broke one of them before the em dash so
      "— the clicks" started a line. The full column sets it in four. */
-  .hero__headline { font-size: clamp(44px, 3.4vw, 56px); max-width: none; }
+  /* 56px is the ceiling for FOUR lines in this column. 64 was tried to fill more
+     height and pushed it to five, breaking before the em dash so "— the clicks"
+     opened a line again. Height is cheaper to buy from the stage cap below than
+     from a headline that wraps badly. */
+  .hero__headline { font-size: clamp(44px, 3.3vw, 56px); max-width: none; }
 
   .hero__serp {
     /* Fills its column rather than capping at 700px. The panel IS the argument
@@ -473,8 +530,25 @@
     width: 100%;
     /* Never taller than the stage, which `overflow: clip` on .hero would
        otherwise have to crop. */
-    max-height: 66vh;
+    max-height: 74vh;
   }
+
+  /* THE PANEL GETS REAL SIZE — the other half of closing the empty space.
+     Shrinking the stage alone leaves the composition small; the artifact has to
+     grow into it. Every value here is the mobile value scaled up, and only above
+     1240px, so the phone layout is untouched. The panel goes from 332px to
+     roughly 430px, which is most of the height the stage no longer wastes.
+
+     A 656px-wide panel setting 14px result titles and 9px tags was reading as a
+     screenshot of a screenshot. These are the sizes a real results row uses. */
+  .hero__serp-row { padding: 15px 22px 15px 26px; gap: 5px; }
+  .hero__serp-title { font-size: 16.5px; }
+  .hero__serp-note { font-size: 12.5px; }
+  .hero__serp-url { font-size: 11.5px; }
+  .hero__serp-tag { font-size: 9.5px; }
+  .hero__serp-bar { padding: 14px 18px; }
+  .hero__serp-omni { font-size: 12px; padding: 9px 15px; }
+  .hero__serp-verdict { font-size: 9.5px; }
 }
 
 /* --------------------------------------------------------------------------
@@ -692,7 +766,13 @@
 @media (min-width: 1240px) and (max-height: 900px) {
   .hero__content { padding: calc(var(--nav-h, 76px) + 1.5vh) 32px 3vh; }
   .hero__eyebrow { display: inline-flex; }
-  .hero__headline { font-size: clamp(34px, 3.3vw, 48px); max-width: none; }
+  /* The height-only block above compacts the panel rows to 9px, which was right
+     when the stage was a full 100vh and everything had to fit. The stage is now
+     clamped to 84vh, so there is room for a middle value here — between the
+     compact 9px and the roomy 15px of the wide block. */
+  .hero__serp-row { padding: 12px 20px 12px 24px; }
+  .hero__serp-bar { padding: 12px 16px; }
+  .hero__headline { font-size: clamp(34px, 3.5vw, 52px); max-width: none; }
   .hero__col { gap: clamp(14px, 2.2vh, 26px); }
   .hero__serp { max-height: 74vh; }
 }

@@ -323,7 +323,25 @@
    phone-order layout at ~1000px, where four columns are 140px each and every
    title breaks to three lines. */
 @container sc-panel (min-width: 1100px) {
-  .sc__panel { padding: 24px 30px 20px; }
+  /* THE HEADER ROW.
+     The panel becomes a grid so the disclaimer can sit on the business name's
+     line instead of on a row of its own at the bottom. At this width the head
+     row was a name and a date stamp with ~900px of nothing after them, while the
+     foot was one 10px line with a dashed rule above it — two half-empty rows.
+     Paired, they fill each other and the panel loses ~40px.
+
+     The head's underline moves to the body's top edge, because a border on the
+     head alone would stop halfway across the panel. */
+  .sc__panel {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
+    padding: 24px 30px 20px;
+  }
+  .sc__top  { grid-area: 1 / 1 / 2 / 3; }
+  .sc__head { grid-area: 2 / 1 / 3 / 2; padding-bottom: 0; border-bottom: 0; }
+  .sc__foot { grid-area: 2 / 2 / 3 / 3; margin: 0; padding: 0; border-top: 0; }
+  .sc__body { grid-area: 3 / 1 / 4 / 3; border-top: 1px solid var(--line); margin-top: 14px; }
 
   /* 446px, measured, and measured against the ORGANIC channel — it has the
      longer mini-stat labels of the two ("Pages with index issues",
@@ -334,19 +352,23 @@
      Sizing this to paid alone is not a smaller mistake, it is a worse one: the
      labels wrapped only on organic, so the panel grew 17px the moment anyone
      touched the toggle and the whole hero jumped under the pointer. */
-  .sc__body { grid-template-columns: minmax(0, 446px) minmax(0, 1fr); }
+  .sc__body { grid-template-columns: minmax(0, 456px) minmax(0, 1fr); }
 
   .sc__score {
     grid-template-columns: auto minmax(0, 1fr);
     align-items: center;
     justify-items: start;
-    gap: 22px;
+    gap: 20px;
     padding: 24px 32px 24px 0;
     border-bottom: 0;
     border-right: 1px solid var(--line);
   }
-  .sc__ring svg { width: 112px; height: 112px; }
-  .sc__ring-label strong { font-size: 30px; }
+  /* Bigger than the 116px the narrow layout uses, and the figure inside it
+     bigger than the 30px each metric cell now sets its own score at. This is the
+     summary of those four; if it matches them it reads as a fifth. */
+  .sc__ring svg { width: 124px; height: 124px; }
+  .sc__ring-label strong { font-size: 38px; }
+  .sc__ring-label span { font-size: 10px; }
 
   /* Back up from the 244px rail's sizes: there are 246px beside the ring here,
      so both labels sit on one line at the panel's normal scale. */
@@ -369,13 +391,87 @@
      they do differ: at a 1240px viewport the columns are ~140px, where "PMax &
      automation guardrails" takes three lines and everything beside it takes two.
      A min-height floor was tried first and only moved the problem to whichever
-     title overflowed the floor. */
-  .sc__row { grid-template-rows: 1fr auto; }
+     title overflowed the floor.
+
+     `isolation` is load-bearing, not decoration — see the hover tint below. */
+  .sc__row { grid-template-rows: 1fr auto; position: relative; isolation: isolate; }
+
+  /* A hairline between metrics, drawn INTO the 26px column gap rather than as a
+     border on the cell. A border would sit at the cell's edge with the whole gap
+     stacked on one side of it, and paying for the rule out of each cell's own
+     padding would have cost ~30px of measure per column — which at 150px columns
+     is a whole extra line of title. */
+  .sc__row + .sc__row::before {
+    content: "";
+    position: absolute;
+    left: -13px;
+    top: 2px;
+    bottom: 2px;
+    width: 1px;
+    background: var(--line);
+  }
+
+  /* Hover/focus tint, in the channel's own colour so the toggle retints this
+     too. It BLEEDS 13px sideways into the gutter and 14px up and down, so the
+     lit area reads as a cell of the instrument rather than as a box drawn around
+     the text — and, like the hairline, it costs the title no width.
+
+     z-index: -1 puts it under the text; `isolation: isolate` on the row is what
+     keeps "under the text" from meaning "under the panel's own background",
+     which is where an un-isolated negative layer lands. */
+  .sc__row::after {
+    content: "";
+    position: absolute;
+    inset: -14px -13px;
+    z-index: -1;
+    border-radius: 12px;
+    background: rgba(var(--acc-rgb), 0.07);
+    opacity: 0;
+    transition: opacity 0.22s ease;
+  }
+  .sc__row:hover::after,
+  .sc__row:focus-within::after { opacity: 1; }
+  .sc__bar { transition: background 0.22s ease; }
+  .sc__row:hover .sc__bar { background: rgba(var(--tint-rgb), 0.16); }
 
   /* Grade UNDER the title, not on its baseline. In a ~180px column
      "Conversion tracking readiness" takes two lines and `space-between` left
-     "POOR · 42" hanging alone off the end of the second one. */
-  .sc__row-top { flex-direction: column; align-items: flex-start; gap: 5px; }
+     "POOR · 42" hanging alone off the end of the second one.
+
+     `justify-content: space-between` inside the stretched 1fr track: the title
+     hangs from the top of the cell and the figure sits at the bottom, just above
+     the bar. All four titles are the same height and all four figures line up,
+     so the only thing that varies between cells is the air in the middle. */
+  .sc__row-top {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 5px;
+  }
+
+  /* THE SCORE AS THE HEADLINE OF ITS CELL.
+     A ~190x130 box holding a 14px title, a 10.5px caption and a 5px bar is a
+     lot of box around very little ink, and it read as four thin rows sharing a
+     panel rather than four instruments. Setting the number at display size
+     gives each cell its own centre of gravity — and it is the one figure in the
+     cell a reader actually compares against the others. */
+  .sc__row-value {
+    display: flex;
+    align-items: baseline;
+    gap: 9px;
+  }
+  .sc__row-sep { display: none; }
+  .sc__row-score {
+    order: -1;
+    font-family: var(--font-display);
+    font-size: 30px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    /* The four figures are read as a set, so their digits must not shift. */
+    font-variant-numeric: tabular-nums;
+    text-transform: none;
+  }
 
   /* Tighter leading than the 1.6 these inherit: every title wraps here, and at
      a 170px measure the default set two lines further apart than the 5px
@@ -423,7 +519,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sc__tab { transition: none; }
+  .sc__tab,
+  .sc__row::after,
+  .sc__bar { transition: none; }
 }
 
 

@@ -322,8 +322,17 @@ export default function ScorecardPanel({ delay = 0, compact = false }) {
               <li className="sc__row" key={r.t} data-scrow>
                 <div className="sc__row-top">
                   <span className="sc__row-title">{r.t}</span>
+                  {/* Three spans, not the string "Fair · 58".
+                      Narrow layouts render them inline and read exactly as
+                      before. The instrument strip sets the score as a display
+                      figure with the grade beside it — four KPI cells rather
+                      than four captions — which needs the number and the word to
+                      be separately styleable. The separator is a real text node
+                      so the inline case keeps its spacing; the strip drops it. */}
                   <span className={`sc__row-value is-${r.lvl}`}>
-                    {LVL_LABEL[r.lvl]} · {r.s}
+                    <span className="sc__row-grade">{LVL_LABEL[r.lvl]}</span>
+                    <span className="sc__row-sep"> · </span>
+                    <span className="sc__row-score">{r.s}</span>
                   </span>
                 </div>
                 <div className="sc__bar" aria-hidden="true">

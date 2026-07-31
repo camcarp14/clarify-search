@@ -660,6 +660,62 @@
   margin-top: -1px;
 }
 
+/* --------------------------------------------------------------------------
+   THE REPLAY CONTROL, IN THE MOCK'S TOOLBAR
+
+   Below this width it is a labelled pill under the panel. From 900px up it
+   becomes a round icon button sitting at the right end of the fake browser
+   toolbar — which is what it always was: a reload button for the thing on
+   screen. As a stray pill floating in the gap between the mock and the
+   scorecard it read as an unplaced element, because it was one.
+
+   Absolutely positioned against `.hero__aside` rather than placed inside
+   `.hero__serp-bar`, because the whole mock is aria-hidden and this is the one
+   real control in it. Position, not parentage, is what puts it in the chrome.
+   -------------------------------------------------------------------------- */
+
+@media (min-width: 900px) {
+  .hero__aside { position: relative; }
+
+  .hero__replay {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    z-index: 3;
+    margin-top: 0;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    justify-content: center;
+    gap: 0;
+    border-radius: 50%;
+    background: rgba(var(--tint-rgb), 0.03);
+  }
+
+  .hero__replay-text {
+    /* Removed from the visual layer only. The button still has an accessible
+       name — `aria-label` on the element itself, since a bare ↺ has none. */
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .hero__replay-icon { font-size: 14px; margin-top: 0; }
+
+  /* The omnibox is `flex: 1` and would run under the button, so it gives back
+     exactly the width the button occupies.
+
+     On the OMNIBOX as a margin, not on the toolbar as padding-right: two
+     height-driven blocks further down reset `.hero__serp-bar`'s padding with the
+     shorthand, and one of them (1240px + max-height 900px) covers every ordinary
+     laptop — so a padding-right here would have been silently dropped at exactly
+     the sizes most people see. Nothing overrides this margin. */
+  .hero__serp-omni { margin-right: 38px; }
+}
+
 /* Single column: the control belongs under the panel it replays, not stranded
    at the bottom of a stack of copy. In two columns it is placed by the grid
    (see the wide block above), so this only has to handle the centred case. */

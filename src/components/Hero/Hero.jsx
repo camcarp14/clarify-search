@@ -507,20 +507,32 @@ export default function Hero() {
               </div>
             </div>
 
-            {/* Replay. A real <button>, outside the aria-hidden panel so it is
-                reachable, and labelled for what it does rather than what it looks
-                like. It replays the argument only — see the handler for why the
-                headline reveal is deliberately not part of it. */}
+            {/* Replay.
+                It replays the argument only — see the handler for why the
+                headline reveal is deliberately not part of it.
+
+                A SIBLING of the mock, never a child, and that is not a style
+                choice: `.hero__serp` is aria-hidden, and a focusable control
+                inside an aria-hidden subtree is reachable by Tab but invisible
+                to a screen reader, which is the worst of both. Above 900px CSS
+                parks it over the mock's toolbar — where a browser keeps its
+                reload button — without it ever entering that subtree.
+
+                The label is a real text node so it names the button; the wide
+                layout hides the word and `aria-label` takes over, because a bare
+                glyph is legible as reload in chrome but not in the a11y tree. */}
             <button
               type="button"
               className="hero__replay"
               ref={replayRef}
               data-busy="false"
+              aria-label="Replay the search animation"
+              title="Replay"
             >
               <span className="hero__replay-icon" aria-hidden="true">
                 ↺
               </span>
-              Replay
+              <span className="hero__replay-text">Replay</span>
             </button>
 
           </div>

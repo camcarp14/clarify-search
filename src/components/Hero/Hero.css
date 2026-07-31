@@ -431,25 +431,51 @@
          SERP mock | scorecard  */
     grid-template-columns: 1fr 1fr;
     grid-template-rows: auto auto;
-    /*  headline   | copy + CTAs
-        SERP mock  | scorecard
-       Argument across the top, artifacts across the bottom. The alternative was
-       stacking both artifacts in the right column, which made the hero 1,150px
-       tall and left a 500px hole in the left column — a 480px stack of copy
-       centred against a 1,000px stack of panels. */
+    /*  copy | SERP mock
+        scorecard, full width
+       The scorecard sits directly under the mock — problem above, deliverable
+       below — and spans BOTH columns.
+
+       Spanning is not a stylistic preference, it is the only arrangement the
+       heights allow. Measured: the copy column is ~410px, the SERP mock ~350px
+       and the scorecard ~490px. Parked in the right-hand column the two
+       artifacts stack to ~870px against 410px of text, and the difference —
+       just over 500px — becomes an empty bottom-left quadrant that nothing on
+       this page can fill. Centring the copy against it only moves the hole to
+       the top-left, which is worse, because that is where a reader starts.
+
+       Given away to the full width the same panel becomes a horizontal
+       instrument strip (see the 1100px container query in Scorecard.css): the
+       ring and verdict take a rail on the left, the four graded lines run
+       across as four columns, and the panel drops to ~420px. The fold then
+       reads argument | evidence, deliverable underneath — and there is no hole
+       anywhere, because the row the scorecard is in is the only row it is
+       sharing with nothing. */
     grid-template-areas:
-      'head copy'
-      'mock card';
+      'copy mock'
+      'card card';
     align-content: center;
     align-items: start;
     justify-items: stretch;
     text-align: left;
     column-gap: clamp(32px, 3vw, 56px);
-    row-gap: clamp(26px, 3.4vh, 44px);
+    row-gap: clamp(18px, 2.4vh, 30px);
   }
 
-  .hero__top { grid-area: head; align-items: flex-start; }
-  .hero__resolve { grid-area: copy; align-items: flex-start; align-self: end; max-width: 46ch; }
+  .hero__col {
+    grid-area: copy;
+    /* START, so the headline sets level with the mock's top edge and the fold
+       reads top-down. The column and the mock are within ~60px of each other in
+       height now that the scorecard has its own row, so there is barely any
+       slack left to distribute. */
+    align-self: start;
+    display: grid;
+    gap: clamp(20px, 3vh, 34px);
+    justify-items: start;
+  }
+
+  .hero__top { align-items: flex-start; }
+  .hero__resolve { align-items: flex-start; max-width: 46ch; }
   .hero__aside { grid-area: mock; }
   .sc { grid-area: card; }
 
@@ -643,6 +669,10 @@
    replay it, then the deliverable, then the pitch. The `.hero__replay` lives
    inside `.hero__aside` so it travels with the mock. */
 @media (max-width: 1239px) {
+  /* The wrapper only exists to make the desktop row-span possible; dissolved
+     here so the four blocks are grid children again and `order` can place them. */
+  .hero__col { display: contents; }
+
   .hero__top { order: 1; }
   .hero__aside { order: 2; display: grid; gap: 10px; justify-items: center; }
   /* Copy and CTAs BEFORE the scorecard here, which inverts the desktop reading.

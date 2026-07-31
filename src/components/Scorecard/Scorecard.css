@@ -301,6 +301,88 @@
   .sc__minis span { font-size: 10px; letter-spacing: -0.005em; }
 }
 
+/* THE INSTRUMENT STRIP — the panel at full hero width.
+
+   The hero gives this panel its own row spanning both columns, so above ~1100px
+   of container it is a 1300px box. The 600px layout does not scale up to that:
+   a 244px rail beside one column of rows leaves the four bars a thousand pixels
+   long, which reads as a spreadsheet with a formatting bug, and the panel stays
+   ~490px tall because the stacked rail — ring, then flag, then verdict, then
+   mini-stats — sets the height on its own.
+
+   Both problems have the same fix. Put the ring back BESIDE the verdict, the
+   way the phone layout has it, and the rail collapses from 293px to ~150px. Run
+   the four graded lines across as four columns and each bar gets a ~190px
+   measure, which is the width they were drawn for. The panel lands at ~420px
+   and reads as an instrument strip: score on the left, the four things it is
+   scoring across the rest.
+
+   1100px and not 900px so the handoff is clean. The hero goes two-column at a
+   1240px viewport, where this panel is 1176px wide; below that it is stacked and
+   its width tracks the viewport, so a 900px threshold would put the strip into a
+   phone-order layout at ~1000px, where four columns are 140px each and every
+   title breaks to three lines. */
+@container sc-panel (min-width: 1100px) {
+  .sc__panel { padding: 24px 30px 20px; }
+
+  /* 446px, measured, and measured against the ORGANIC channel — it has the
+     longer mini-stat labels of the two ("Pages with index issues",
+     "Striking-distance terms" want 247px plus their 24px gap; paid's want 214).
+     Less the 32px divider gutter, the 112px ring and the 22px beside it, the
+     rail leaves 280 and both channels fit on one line each.
+
+     Sizing this to paid alone is not a smaller mistake, it is a worse one: the
+     labels wrapped only on organic, so the panel grew 17px the moment anyone
+     touched the toggle and the whole hero jumped under the pointer. */
+  .sc__body { grid-template-columns: minmax(0, 446px) minmax(0, 1fr); }
+
+  .sc__score {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    justify-items: start;
+    gap: 22px;
+    padding: 24px 32px 24px 0;
+    border-bottom: 0;
+    border-right: 1px solid var(--line);
+  }
+  .sc__ring svg { width: 112px; height: 112px; }
+  .sc__ring-label strong { font-size: 30px; }
+
+  /* Back up from the 244px rail's sizes: there are 246px beside the ring here,
+     so both labels sit on one line at the panel's normal scale. */
+  .sc__minis { gap: 24px; }
+  .sc__minis strong { font-size: 16px; }
+  .sc__minis span { font-size: 10.5px; letter-spacing: 0; }
+
+  .sc__rows {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    /* column-gap only. `gap` here would lose to `.sc--compact .sc__rows`, which
+       is two class selectors and sits further down the file. */
+    column-gap: 26px;
+    align-content: center;
+    padding: 24px 0 24px 32px;
+  }
+  /* Bar pinned to the BOTTOM of its cell, title to the top.
+     The four cells already stretch to a common height (grid's default
+     `align-items: stretch`), so giving the title track the free space puts all
+     four bars on one baseline no matter how many lines each title takes — and
+     they do differ: at a 1240px viewport the columns are ~140px, where "PMax &
+     automation guardrails" takes three lines and everything beside it takes two.
+     A min-height floor was tried first and only moved the problem to whichever
+     title overflowed the floor. */
+  .sc__row { grid-template-rows: 1fr auto; }
+
+  /* Grade UNDER the title, not on its baseline. In a ~180px column
+     "Conversion tracking readiness" takes two lines and `space-between` left
+     "POOR · 42" hanging alone off the end of the second one. */
+  .sc__row-top { flex-direction: column; align-items: flex-start; gap: 5px; }
+
+  /* Tighter leading than the 1.6 these inherit: every title wraps here, and at
+     a 170px measure the default set two lines further apart than the 5px
+     between a title and its grade. */
+  .sc__row-title { line-height: 1.35; }
+}
+
 @media (max-width: 899px) {
   .sc__panel { padding: 20px 18px 18px; border-radius: 18px; }
   .sc__top { flex-direction: column; align-items: flex-start; gap: 10px; }
@@ -361,20 +443,28 @@
 /* --------------------------------------------------------------------------
    IN THE HERO
 
-   Tightened against the standalone version: this panel now shares a column with
-   a 400px SERP mock inside a stage that has to stay hero-sized. Type scale is
-   untouched — only spacing and the ring.
+   Tightened against the standalone version: this panel shares a stage with a
+   ~350px SERP mock that has to stay hero-sized. Type scale is untouched — only
+   spacing and the ring.
+
+   SCOPED TO .hero__content, NOT .hero__aside. These were written when the panel
+   rendered inside the aside, next to the mock; it is the aside's SIBLING now —
+   its own grid area — so every one of them was a descendant selector matching
+   nothing, and the panel had been rendering at the section-era radius and
+   spacing since the move.
    -------------------------------------------------------------------------- */
 
-.hero__aside .sc__panel {
+.hero__content .sc__panel {
   border-radius: 18px;
-  box-shadow: var(--lift-3);
+  /* One step down the elevation ramp from the mock's --lift-4. Two
+     hard-shadowed slabs in one fold read as two things shouting. */
+  box-shadow: var(--lift-2);
 }
 
-.hero__aside .sc__head { margin-top: 14px; padding-bottom: 14px; }
-.hero__aside .sc__foot { margin-top: 12px; padding-top: 11px; }
-.hero__aside .sc__verdict p { font-size: 13px; }
-.hero__aside .sc__row-note { font-size: 12px; }
+.hero__content .sc__head { margin-top: 14px; padding-bottom: 14px; }
+.hero__content .sc__foot { margin-top: 12px; padding-top: 11px; }
+.hero__content .sc__verdict p { font-size: 13px; }
+.hero__content .sc__row-note { font-size: 12px; }
 
 /* --------------------------------------------------------------------------
    COMPACT — the hero variant
@@ -386,11 +476,9 @@
    the fold feel cluttered.
    -------------------------------------------------------------------------- */
 
-.sc--compact .sc__rows { gap: 15px; }
+/* row-gap, not gap. What this is tightening is vertical rhythm; the shorthand
+   also set a column gap, which is dead in every single-column layout but is the
+   one the instrument strip needs at 26px. */
+.sc--compact .sc__rows { row-gap: 15px; }
 .sc--compact .sc__row { gap: 7px; }
 .sc--compact .sc__foot { margin-top: 14px; padding-top: 12px; }
-
-/* Both hero panels drop a step on the elevation ramp. --lift-4 on the mock and
-   --lift-3 on the scorecard put two hard-shadowed slabs side by side, which
-   reads as two things shouting rather than two things sitting on paper. */
-.hero__content .sc__panel { box-shadow: var(--lift-2); }

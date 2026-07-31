@@ -379,59 +379,58 @@ export default function Hero() {
     <section className="hero" id="top" ref={rootRef} aria-labelledby="heroTitle">
       <div className="hero__stage" ref={stageRef}>
         <div className="hero__content">
-          {/* FOUR DIRECT CHILDREN, placed by grid-template-areas above 1240px:
+          {/* THREE CHILDREN, placed by grid-template-areas above 1240px:
 
-                  headline | copy + CTAs
-                  SERP mock| scorecard
+                  copy | SERP mock
+                  scorecard, spanning both
 
-              The two artifacts sit side by side, which is the point — the mock
-              states the problem (a click bought on a term already ranked #1) and
-              the scorecard states what comes back for it.
+              The scorecard sits directly under the mock — problem above,
+              deliverable below — and takes a full-width row of its own, where it
+              lays out as a horizontal instrument strip. Hero.css has the height
+              arithmetic that rules out keeping it in the right-hand column.
 
-              This replaced a version that stacked both artifacts in one column.
-              That made the hero 1,150px tall and put a 500px hole in the left
-              column, because a 480px stack of copy was being centred against a
-              1,000px stack of panels. Side by side the tallest row is the
-              scorecard's 561px and the hero is ~850px.
+              `.hero__col` exists to make the left cell one grid item: the
+              eyebrow, headline, copy and CTAs have to be a single child to
+              occupy a single area. Below 1240px it goes `display: contents` and
+              the four blocks become grid children again in stacked order. */}
+          <div className="hero__col">
+              <div className="hero__top">
+                <span className="hero__eyebrow">
+                  <span className="hero__dot hero__dot--a" aria-hidden="true" />
+                  <span className="hero__dot hero__dot--b" aria-hidden="true" />
+                  <span className="hero__dot hero__dot--c" aria-hidden="true" />
+                  Paid · organic · AI search · Chicago
+                </span>
 
-              No wrapper elements and no `display: contents`: all four are direct
-              children, so the single-column case below is just `order`. */}
-            <div className="hero__top">
-              <span className="hero__eyebrow">
-                <span className="hero__dot hero__dot--a" aria-hidden="true" />
-                <span className="hero__dot hero__dot--b" aria-hidden="true" />
-                <span className="hero__dot hero__dot--c" aria-hidden="true" />
-                Paid · organic · AI search · Chicago
-              </span>
-
-              <h1 id="heroTitle" className="hero__headline" ref={headlineRef}>
-                Own more of the results page — the clicks you{' '}
-                <em className="ital pay">buy</em> and the ones you{' '}
-                <em className="ital earn">earn</em>.
-              </h1>
-            </div>
-
-            {/* The "18% · Est. spend waste" callout that used to sit here is
-                gone. It was the same figure as the scorecard's first mini-stat,
-                so the hero was quoting one cell of an artifact that lived 8,000px
-                further down the page. The scorecard is in the aside now and the
-                number is in it. */}
-            <div className="hero__resolve" ref={resolveRef}>
-              <p className="hero__copy" data-resolve-item>
-                Clarify audits how your business shows up in Google —{' '}
-                <strong>paid ads, organic rankings, and AI answers</strong> — then
-                fixes what&rsquo;s leaking. Flat fees, month-to-month, no agency
-                theater.
-              </p>
-
-              <div className="hero__actions" data-resolve-item>
-                <motion.a className="cta" href="#pricing" {...PRESS}>
-                  Get a free leak check →
-                </motion.a>
-                <motion.a className="secondary-cta" href="#method" {...PRESS}>
-                  See how it works
-                </motion.a>
+                <h1 id="heroTitle" className="hero__headline" ref={headlineRef}>
+                  Own more of the results page — the clicks you{' '}
+                  <em className="ital pay">buy</em> and the ones you{' '}
+                  <em className="ital earn">earn</em>.
+                </h1>
               </div>
+
+              {/* The "18% · Est. spend waste" callout that used to sit here is
+                  gone. It was the same figure as the scorecard's first mini-stat,
+                  so the hero was quoting one cell of an artifact that lived 8,000px
+                  further down the page. The scorecard is in the aside now and the
+                  number is in it. */}
+              <div className="hero__resolve" ref={resolveRef}>
+                <p className="hero__copy" data-resolve-item>
+                  Clarify audits how your business shows up in Google —{' '}
+                  <strong>paid ads, organic rankings, and AI answers</strong> — then
+                  fixes what&rsquo;s leaking. Flat fees, month-to-month, no agency
+                  theater.
+                </p>
+
+                <div className="hero__actions" data-resolve-item>
+                  <motion.a className="cta" href="#pricing" {...PRESS}>
+                    Get a free leak check →
+                  </motion.a>
+                  <motion.a className="secondary-cta" href="#method" {...PRESS}>
+                    See how it works
+                  </motion.a>
+                </div>
+            </div>
           </div>
 
           <div className="hero__aside">

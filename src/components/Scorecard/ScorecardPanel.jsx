@@ -40,7 +40,21 @@ const prefersReduced = () =>
  * toggle is the only thing that moves afterwards.
  * ============================================================================
  */
-export default function ScorecardPanel({ delay = 0 }) {
+/**
+ * `compact` drops the four per-row explanation sentences.
+ *
+ * In the hero this panel sits beside the SERP mock, and the two of them together
+ * put 198 words and 31 coloured boxes above the fold — which reads as clutter no
+ * matter how well each one is laid out on its own. Four of the six sentence
+ * blocks up there were these notes. They are the report's detail, and detail is
+ * what the actual deliverable is for; the hero needs the shape of the thing —
+ * a score, a verdict, four graded lines — not its prose.
+ *
+ * Omitted from the render, not hidden with CSS: hidden text still sits in the
+ * accessibility tree and still gets read out, which would make the panel longer
+ * to listen to than it is to look at.
+ */
+export default function ScorecardPanel({ delay = 0, compact = false }) {
   const [channel, setChannel] = useState('paid')
   const data = INST[channel]
 
@@ -231,7 +245,7 @@ export default function ScorecardPanel({ delay = 0 }) {
   }
 
   return (
-    <div className="sc" data-ch={channel}>
+    <div className={`sc${compact ? ' sc--compact' : ''}`} data-ch={channel}>
       <div className="sc__panel" ref={panelRef}>
         <div className="sc__top">
           <span className="mono-label">Account scorecard</span>
@@ -315,7 +329,7 @@ export default function ScorecardPanel({ delay = 0 }) {
                 <div className="sc__bar" aria-hidden="true">
                   <i className={`sc__bar-fill is-${r.lvl}`} data-bar />
                 </div>
-                <p className="sc__row-note">{r.n}</p>
+                {compact ? null : <p className="sc__row-note">{r.n}</p>}
               </li>
             ))}
           </ul>

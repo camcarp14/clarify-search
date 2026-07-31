@@ -529,7 +529,7 @@ export default function Hero() {
           {/* THE DELIVERABLE, beside the problem. This used to be its own section
               8,000px down the page, quoting the same 18% the hero had already
               spent as a one-line callout. */}
-          <ScorecardPanel delay={SCORECARD_DELAY} />
+          <ScorecardPanel delay={SCORECARD_DELAY} compact />
         </div>
       </div>
     </section>

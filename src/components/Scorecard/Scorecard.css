@@ -375,3 +375,22 @@
 .hero__aside .sc__foot { margin-top: 12px; padding-top: 11px; }
 .hero__aside .sc__verdict p { font-size: 13px; }
 .hero__aside .sc__row-note { font-size: 12px; }
+
+/* --------------------------------------------------------------------------
+   COMPACT — the hero variant
+
+   Without the four row notes each row is title + grade + bar, so the vertical
+   rhythm that was set for prose is now too loose. Tightening it brings the panel
+   to roughly the SERP mock's height, and two panels of similar height side by
+   side read far calmer than 356px next to 578px — which was most of what made
+   the fold feel cluttered.
+   -------------------------------------------------------------------------- */
+
+.sc--compact .sc__rows { gap: 15px; }
+.sc--compact .sc__row { gap: 7px; }
+.sc--compact .sc__foot { margin-top: 14px; padding-top: 12px; }
+
+/* Both hero panels drop a step on the elevation ramp. --lift-4 on the mock and
+   --lift-3 on the scorecard put two hard-shadowed slabs side by side, which
+   reads as two things shouting rather than two things sitting on paper. */
+.hero__content .sc__panel { box-shadow: var(--lift-2); }

@@ -438,11 +438,89 @@ section.band#ai-build {
    reveals a path along its own length.
    -------------------------------------------------------------------------- */
 
+/* THE PLOT AREA. The chart's furniture — gridlines, baseline, the reference
+   and its tag, the axis captions — lives here with the curve, because a line on
+   its own is a shape and a line on a scale is a reading. The panel is meant to
+   look like something that measured a thing. */
+#ai-build .mk-chart {
+  position: relative;
+  margin-top: 22px;
+}
+
+/* 82px, up from legacy's 58. A 58px plot for an eight-point series put the
+   whole curve inside a band thinner than the number above it, which is most of
+   why this read as decoration; the left column had the height spare, because
+   `align-content: start` was pooling it under the stat chips. */
 #ai-build .mk-spark {
+  display: block;
   width: 100%;
-  height: 58px;
-  margin-top: 16px;
+  height: 82px;
   overflow: visible;
+}
+
+/* Every rule in the plot. `non-scaling-stroke` because
+   `preserveAspectRatio="none"` stretches this viewBox ~1.25x horizontally, and
+   without it a 1-unit rule renders 1.25px wide while a horizontal one renders
+   0.97px — the frame would be visibly heavier in one axis than the other. */
+#ai-build .mk-grid line,
+#ai-build .mk-ref {
+  vector-effect: non-scaling-stroke;
+  shape-rendering: crispEdges;
+}
+
+#ai-build .mk-grid line {
+  stroke: rgba(var(--tint-rgb), 0.13);
+  stroke-width: 1;
+}
+/* The floor the area sits on reads as an axis, so it is a step darker than the
+   gridlines rather than one of them. */
+#ai-build .mk-grid .mk-base {
+  stroke: rgba(var(--tint-rgb), 0.22);
+}
+
+/* Last week, dashed. The one comparison the panel actually makes in words. */
+#ai-build .mk-ref {
+  stroke: rgba(var(--iris-rgb), 0.45);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+}
+
+/* One mark per weekly reading. */
+#ai-build .mk-marks circle {
+  fill: var(--panel);
+  stroke: var(--iris-soft);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+#ai-build .mk-axis {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 9px;
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+
+/* The legend for the dashed reference. `<i>` is a swatch of the same rule, so
+   the row says which line it is naming rather than relying on the reader to
+   pair the only dashed thing with the only dashed word. */
+#ai-build .mk-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--iris-soft);
+}
+#ai-build .mk-legend i {
+  width: 16px;
+  height: 0;
+  border-top: 1px dashed currentColor;
+  opacity: 0.75;
 }
 
 /* §A.5's conditions, all present: one path in the section, `stroke-linecap:
@@ -792,6 +870,7 @@ section.band#ai-build {
 }
 
 /* FEED LENGTH — mirrors `MOTION.feed.rowsShown` in aiBuild.motion.js.
+   Desktop shows 6 (was 5 — see the note on START in aiBuildData.js).
    §B.8: "Feed shows 3 rows, not 5 — five rows at 390px pushes the strip off
    the pinned frame." The breakpoint is the motion system's `MEDIA.mobile`
    (899px), not the mock's 900px layout breakpoint, because this is a
@@ -844,8 +923,13 @@ section.band#ai-build {
     padding: 14px 16px;
   }
   #ai-build .aib__stage .mk-spark {
-    height: 44px;
+    height: 48px;
+  }
+  #ai-build .aib__stage .mk-chart {
     margin-top: 10px;
+  }
+  #ai-build .aib__stage .mk-axis {
+    margin-top: 5px;
   }
   #ai-build .aib__stage .mk-chips {
     margin-top: 12px;

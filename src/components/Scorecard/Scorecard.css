@@ -336,12 +336,12 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: baseline;
-    padding: 24px 30px 20px;
+    padding: 28px 34px 24px;
   }
   .sc__top  { grid-area: 1 / 1 / 2 / 3; }
-  .sc__head { grid-area: 2 / 1 / 3 / 2; padding-bottom: 0; border-bottom: 0; }
+  .sc__head { grid-area: 2 / 1 / 3 / 2; margin-top: 18px; padding-bottom: 0; border-bottom: 0; }
   .sc__foot { grid-area: 2 / 2 / 3 / 3; margin: 0; padding: 0; border-top: 0; }
-  .sc__body { grid-area: 3 / 1 / 4 / 3; border-top: 1px solid var(--line); margin-top: 14px; }
+  .sc__body { grid-area: 3 / 1 / 4 / 3; border-top: 1px solid var(--line); margin-top: 18px; }
 
   /* 446px, measured, and measured against the ORGANIC channel — it has the
      longer mini-stat labels of the two ("Pages with index issues",
@@ -352,14 +352,14 @@
      Sizing this to paid alone is not a smaller mistake, it is a worse one: the
      labels wrapped only on organic, so the panel grew 17px the moment anyone
      touched the toggle and the whole hero jumped under the pointer. */
-  .sc__body { grid-template-columns: minmax(0, 456px) minmax(0, 1fr); }
+  .sc__body { grid-template-columns: minmax(0, 462px) minmax(0, 1fr); }
 
   .sc__score {
     grid-template-columns: auto minmax(0, 1fr);
     align-items: center;
     justify-items: start;
     gap: 20px;
-    padding: 24px 32px 24px 0;
+    padding: 28px 36px 28px 0;
     border-bottom: 0;
     border-right: 1px solid var(--line);
   }
@@ -380,9 +380,9 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
     /* column-gap only. `gap` here would lose to `.sc--compact .sc__rows`, which
        is two class selectors and sits further down the file. */
-    column-gap: 26px;
+    column-gap: 30px;
     align-content: center;
-    padding: 24px 0 24px 32px;
+    padding: 28px 0 28px 36px;
   }
   /* Bar pinned to the BOTTOM of its cell, title to the top.
      The four cells already stretch to a common height (grid's default
@@ -404,7 +404,7 @@
   .sc__row + .sc__row::before {
     content: "";
     position: absolute;
-    left: -13px;
+    left: -15px;
     top: 2px;
     bottom: 2px;
     width: 1px;
@@ -422,7 +422,7 @@
   .sc__row::after {
     content: "";
     position: absolute;
-    inset: -14px -13px;
+    inset: -16px -15px;
     z-index: -1;
     border-radius: 12px;
     background: rgba(var(--acc-rgb), 0.07);

@@ -134,7 +134,7 @@ export const MOTION = {
      * agrees with the timeline; if you change this number, change that rule
      * too. It is commented at both ends.
      */
-    rowsShown: { desktop: 5, mobile: 3 },
+    rowsShown: { desktop: 6, mobile: 3 },
   },
 
   /* ----------------------------------------------------------------------- */

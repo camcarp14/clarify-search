@@ -71,6 +71,7 @@ export default function AiBuild() {
   const mockRef = useRef(null)
   const lineRef = useRef(null)
   const areaRef = useRef(null)
+  const marksRef = useRef(null)
   const dotRef = useRef(null)
   const hoursRef = useRef(null)
   const deltaRef = useRef(null)
@@ -171,6 +172,7 @@ export default function AiBuild() {
           /* §B.8 reduced motion: "Sparkline at stroke-dashoffset: 0." */
           setIf(lineRef.current, { strokeDashoffset: 0 })
           setIf(areaRef.current, { opacity: 1 })
+          setIf(marksRef.current, { opacity: 1 })
           setIf(dotRef.current, { scale: 1 })
           setIf(deltaRef.current, { yPercent: 0 })
 
@@ -385,9 +387,13 @@ export default function AiBuild() {
         )
 
         /* The area under the line cross-fades on OPACITY, never on dashoffset
-         * — the other half of the §A.5 rule. */
+         * — the other half of the §A.5 rule. The per-reading marks ride the
+         * same window: they are the same datum as the line, so a mark arriving
+         * on its own clock would read as a second, disagreeing source. The
+         * gridlines, baseline and reference are NOT in here — a chart's frame
+         * exists before its data does. */
         tl.fromTo(
-          areaRef.current,
+          [areaRef.current, marksRef.current],
           { opacity: 0 },
           { opacity: 1, duration: sparkDur, ease: sp.areaEase },
           sp.start,
@@ -667,33 +673,94 @@ export default function AiBuild() {
                   </span>
                 </span>
 
-                <svg
-                  className="mk-spark"
-                  viewBox={SPARK.viewBox}
-                  preserveAspectRatio="none"
-                  aria-hidden="true"
-                >
-                  <defs>
-                    <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={SPARK.fillFrom} />
-                      <stop offset="100%" stopColor={SPARK.fillTo} />
-                    </linearGradient>
-                  </defs>
-                  <path
-                    className="mk-area"
-                    ref={areaRef}
-                    d={SPARK.area}
-                    fill={`url(#${gradientId})`}
-                  />
-                  <path className="mk-line" ref={lineRef} d={SPARK.line} />
-                  <circle
-                    className="mk-dot"
-                    ref={dotRef}
-                    cx={SPARK.dot.cx}
-                    cy={SPARK.dot.cy}
-                    r={SPARK.dot.r}
-                  />
-                </svg>
+                {/* THE CHART.
+                    Frame first, then the data, so the scale exists before the
+                    line arrives and draws onto it. Everything with a position
+                    comes from SPARK, which derives it from the value series —
+                    there are no pixel literals in here to fall out of step
+                    with the numbers the panel states.
+
+                    `vector-effect: non-scaling-stroke` on the rules is not
+                    optional: `preserveAspectRatio="none"` stretches this
+                    viewBox horizontally, and without it every rule renders
+                    ~1.25x its own width. */}
+                <div className="mk-chart">
+                  <svg
+                    className="mk-spark"
+                    viewBox={SPARK.viewBox}
+                    preserveAspectRatio="none"
+                    aria-hidden="true"
+                  >
+                    <defs>
+                      <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={SPARK.fillFrom} />
+                        <stop offset="100%" stopColor={SPARK.fillTo} />
+                      </linearGradient>
+                    </defs>
+
+                    <g className="mk-grid">
+                      {SPARK.grid.map((g) => (
+                        <line key={g.v} x1="0" y1={g.y} x2={SPARK.width} y2={g.y} />
+                      ))}
+                      <line
+                        className="mk-base"
+                        x1="0"
+                        y1={SPARK.height}
+                        x2={SPARK.width}
+                        y2={SPARK.height}
+                      />
+                    </g>
+
+                    <line
+                      className="mk-ref"
+                      x1="0"
+                      y1={SPARK.ref.y}
+                      x2={SPARK.width}
+                      y2={SPARK.ref.y}
+                    />
+
+                    <path
+                      className="mk-area"
+                      ref={areaRef}
+                      d={SPARK.area}
+                      fill={`url(#${gradientId})`}
+                    />
+                    <path className="mk-line" ref={lineRef} d={SPARK.line} />
+
+                    {/* One mark per reading, so the curve reads as eight
+                        measurements rather than as a drawn shape. Revealed on
+                        the same window as the area — they are data, not
+                        furniture. */}
+                    <g className="mk-marks" ref={marksRef}>
+                      {SPARK.marks.map((m) => (
+                        <circle key={m.x} cx={m.x} cy={m.y} r="2" />
+                      ))}
+                    </g>
+
+                    <circle
+                      className="mk-dot"
+                      ref={dotRef}
+                      cx={SPARK.dot.cx}
+                      cy={SPARK.dot.cy}
+                      r={SPARK.dot.r}
+                    />
+                  </svg>
+
+                  {/* The axis row carries the reference as a LEGEND, between
+                      the two ends of the x axis. Pinned to the line inside the
+                      plot it crossed the gridline above it, the reference
+                      itself, and — at the other end — the curve; 66px of plot
+                      has nowhere to put a tag that does not already have
+                      something in it. */}
+                  <p className="mk-axis" aria-hidden="true">
+                    <span>{SPARK.axis.from}</span>
+                    <span className="mk-legend">
+                      <i />
+                      {SPARK.ref.label}
+                    </span>
+                    <span>{SPARK.axis.to}</span>
+                  </p>
+                </div>
 
                 <div className="mk-chips">
                   {MOCK.chips.map((chip) => (

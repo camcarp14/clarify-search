@@ -124,14 +124,75 @@ export const MOCK = {
   feedLabel: 'Recent automated activity',
 }
 
-/** The sparkline geometry, lifted verbatim from the legacy <svg>. The area
- *  path closes the line back along the baseline; the line path does not. Kept
- *  as data so the two can never drift apart by a hand-edit to one of them. */
+/* --------------------------------------------------------------------------
+   THE CHART
+
+   This was two hand-written path strings lifted verbatim from the legacy
+   <svg>, kept as data only so the line and the area could not drift apart. It
+   is DERIVED from a value series now, and the reason is not tidiness: a
+   gridline, an axis and a "last week" reference cannot be placed on a curve
+   that has no scale behind it, and without them the panel reads as a mood
+   rather than a measurement.
+
+   THE SERIES AGREES WITH THE COPY, which is the whole point of deriving it.
+   The counter lands on 11.4 and the delta line states that is 3.2 more than
+   last week, so the last point is 11.4 and the one before it is 8.2. Under a
+   13-hour scale six of the eight points land within a pixel of where legacy
+   drew them; the only two that moved are the two the arithmetic disagreed
+   with. Legacy's own geometry implied 9.9 for last week — a 1.5 rise, drawn
+   directly under a sentence claiming 3.2.
+
+   `max` is 13, not 12, so the peak clears the top gridline instead of touching
+   the frame.
+
+   NOTE ON THE DASH REVEAL: `.mk-line` carries `stroke-dasharray: 300` and the
+   timeline animates the offset from 300 to 0. The path is ~246 units long
+   (legacy's was ~245, not the ~296 its comment claims), and any dasharray
+   longer than the path hides it completely, so 300 still clears it.
+   -------------------------------------------------------------------------- */
+
+/** Hours given back, one point per week, oldest → newest. */
+const SPARK_VALUES = [2.6, 3.4, 3.0, 5.2, 6.2, 7.0, 8.2, 11.4]
+/** Full scale of the y axis, in hours. */
+const SPARK_MAX = 13
+const SPARK_W = 240
+const SPARK_H = 60
+
+const spx = (i) => +((SPARK_W * i) / (SPARK_VALUES.length - 1)).toFixed(2)
+const spy = (v) => +(SPARK_H - (v / SPARK_MAX) * SPARK_H).toFixed(2)
+
+const SPARK_POINTS = SPARK_VALUES.map((v, i) => ({ v, x: spx(i), y: spy(v) }))
+const SPARK_LINE = SPARK_POINTS.map((p, i) => `${i ? 'L' : 'M'}${p.x},${p.y}`).join(' ')
+const SPARK_LAST = SPARK_POINTS[SPARK_POINTS.length - 1]
+const SPARK_PREV = SPARK_POINTS[SPARK_POINTS.length - 2]
+
 export const SPARK = {
-  viewBox: '0 0 240 60',
-  area: 'M0,48 L34,44 L68,46 L102,36 L136,31 L170,22 L204,14 L240,7 L240,60 L0,60 Z',
-  line: 'M0,48 L34,44 L68,46 L102,36 L136,31 L170,22 L204,14 L240,7',
-  dot: { cx: 240, cy: 7, r: 3.5 },
+  viewBox: `0 0 ${SPARK_W} ${SPARK_H}`,
+  width: SPARK_W,
+  height: SPARK_H,
+  /** The area closes the line back along the baseline; the line does not. */
+  line: SPARK_LINE,
+  area: `${SPARK_LINE} L${SPARK_W},${SPARK_H} L0,${SPARK_H} Z`,
+  /** Every point gets a mark. The head is the accent dot below, so the marks
+   *  stop one short of it. */
+  marks: SPARK_POINTS.slice(0, -1),
+  dot: { cx: SPARK_LAST.x, cy: SPARK_LAST.y, r: 3.5 },
+  /** Gridlines are declared in HOURS, not in pixels, so they follow the scale
+   *  instead of being positions someone has to re-derive by hand.
+   *
+   *  5 and 10, not the obvious 4/8/12: the dashed reference sits at 8.2, and a
+   *  solid rule at 8 lands nine tenths of a pixel from it. Two rules that close
+   *  together do not read as a grid and a reference, they read as a rendering
+   *  fault. At 5 and 10 the reference has 9px of clear air above it and 16
+   *  below. Two rules is also enough — this is a 66px plot. */
+  grid: [5, 10].map((v) => ({ v, y: spy(v) })),
+  /** The dashed reference: last week's value, which is the figure the delta
+   *  line names. It is labelled in the axis row as a legend rather than pinned
+   *  to the line itself — inside a plot this short, a tag on the line crosses
+   *  either the line, a gridline, or the curve, and it did all three. */
+  ref: { v: SPARK_PREV.v, y: SPARK_PREV.y, label: `Last week · ${SPARK_PREV.v}` },
+  /** Eight points, one per week. */
+  axis: { from: '8 weeks ago', to: 'This week' },
   /** The two gradient stops. These are legacy literals — a dark-theme iris
    *  (154,140,255) that does NOT match the ported --iris-rgb (106,89,219).
    *  Copied rather than tokenised, exactly as spec §4.2 / risk 21 requires:
@@ -224,12 +285,19 @@ export const EVENTS = [
 ]
 
 /**
- * Minutes since midnight for the five seed rows: 09:14, 09:02, 08:47, 08:31,
- * 08:05. Legacy's comment is load-bearing and is kept — "must descend or the
+ * Minutes since midnight for the seed rows: 09:14, 09:02, 08:47, 08:31, 08:05,
+ * 07:52. Legacy's comment is load-bearing and is kept — "must descend or the
  * feed reads wrong": the newest row is at the TOP, so the times count
  * backwards down the list.
+ *
+ * The sixth is new. Legacy seeded five because a JS ticker prepended a row
+ * every 4.6s and five was a starting length; nothing here ticks. What decides
+ * the number now is the panel: the left column grew when the chart got a real
+ * plot, and five rows left ~110px of empty feed beside it. EVENTS[5] was
+ * already in this file — all eight are shipping copy — so the row is copy that
+ * existed, not copy that was written to fill a gap.
  */
-const START = [554, 542, 527, 511, 485]
+const START = [554, 542, 527, 511, 485, 472]
 
 /** Legacy `hhmm()`, verbatim: zero-pads hours AND minutes, wraps hours at 24.
  *  Pure arithmetic over a frozen array — no Date, no random, no browser API —
@@ -242,8 +310,7 @@ const hhmm = (mins) => {
 }
 
 /**
- * The rendered feed. Five rows, `EVENTS[0..4]` paired positionally with
- * `START[0..4]`, exactly as legacy's first paint does.
+ * The rendered feed. `EVENTS[0..n]` paired positionally with `START[0..n]`.
  *
  * `id` is a stable authored key, not the array index and not the event text —
  * indices would let React reuse a DOM node across a data change and the row

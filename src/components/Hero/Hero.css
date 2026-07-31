@@ -458,8 +458,8 @@
     align-items: start;
     justify-items: stretch;
     text-align: left;
-    column-gap: clamp(32px, 3vw, 56px);
-    row-gap: clamp(18px, 2.4vh, 30px);
+    column-gap: clamp(40px, 3.4vw, 64px);
+    row-gap: clamp(26px, 3.4vh, 44px);
   }
 
   .hero__col {
@@ -470,7 +470,7 @@
        slack left to distribute. */
     align-self: start;
     display: grid;
-    gap: clamp(20px, 3vh, 34px);
+    gap: clamp(24px, 3.6vh, 40px);
     justify-items: start;
   }
 
@@ -504,7 +504,13 @@
 @media (min-width: 900px) and (max-height: 900px) {
   .hero__content {
     padding: calc(var(--nav-h, 76px) + 1.2vh) 32px 3vh;
-    gap: 10px;
+    /* ROW gap only. This was the `gap` shorthand, written for the stacked
+       layout this block also covers — where there is one column and a column
+       gap means nothing. Above 1240px it means a great deal: it was overriding
+       the two-column block's `column-gap` and running the copy column and the
+       SERP mock together with 10px between them, on every 1440x900 and
+       1366x768 laptop. */
+    row-gap: 10px;
   }
   .hero__top { gap: 10px; }
   /* Wider measure so the headline sets in two lines instead of three, which is
@@ -782,7 +788,10 @@
   .hero__serp-row { padding: 12px 20px 12px 24px; }
   .hero__serp-bar { padding: 12px 16px; }
   .hero__headline { font-size: clamp(34px, 3.5vw, 52px); max-width: none; }
-  .hero__col { gap: clamp(14px, 2.2vh, 26px); }
+  .hero__col { gap: clamp(18px, 2.8vh, 30px); }
+  /* The height-only block above drops this to 10px for the stacked case; two
+     columns need the mock and the scorecard to read as separate objects. */
+  .hero__content { row-gap: clamp(20px, 2.8vh, 34px); }
   .hero__serp { max-height: 74vh; }
 }
 

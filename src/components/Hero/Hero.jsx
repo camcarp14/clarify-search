@@ -17,14 +17,17 @@ const { seq, pin, intro } = MOTION
 /**
  * When the scorecard reveals, in seconds from load.
  *
- * The SERP sequence starts at `intro.startDelay + intro.sequenceGap` and runs for
- * `sequenceSeconds`. Landing the scorecard at ~62% of that puts it on screen
- * while the strike is wiping — so the reader sees the problem being marked and
- * the deliverable arriving as one thought, instead of watching a finished panel
- * sit there through the whole sequence.
+ * It lands with the SERP mock, not after the argument. The first version waited
+ * for 62% of the sequence on the theory that the problem should be marked before
+ * the deliverable arrives — which put the panel at 4.5s and its last row at
+ * roughly 6s, and read exactly as "the scorecard comes in way too late".
+ *
+ * The theory was wrong for what this is. The scorecard is not a beat in the SERP
+ * argument; it is the hero's second artifact, sitting beside the first. A reader
+ * scanning the fold should find both there. The SERP sequence still owns its own
+ * clock and runs for 5.6s after this.
  */
-const SCORECARD_DELAY =
-  MOTION.intro.startDelay + MOTION.intro.sequenceGap + MOTION.sequenceSeconds * 0.62
+const SCORECARD_DELAY = MOTION.intro.startDelay + 1.0
 
 /** Framer Motion is scoped to component-level micro-interaction only — the
  *  scroll work is entirely GSAP's. */

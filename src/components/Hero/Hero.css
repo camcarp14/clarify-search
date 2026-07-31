@@ -41,8 +41,15 @@
   max-width: 1120px;
   margin: 0 auto;
   /* The header is position:fixed, so the hero reserves its own clearance —
-     nothing pushes it down. */
-  padding: calc(var(--nav-h, 76px) + 2.5vh) 32px 5vh;
+     nothing pushes it down.
+
+     The `+ 2.5vh` this replaces left 12px between the header's bottom edge and
+     the eyebrow at a 780px viewport — measured, and reported as "extremely
+     cramped". That number was set when the stage was a hard clamp and every
+     pixel of height was contested; the stage grows to its content now, so
+     starving the top buys nothing. The clamp keeps the gap from collapsing on a
+     short window or ballooning on a tall one. */
+  padding: calc(var(--nav-h, 76px) + clamp(26px, 4vh, 56px)) 32px 5vh;
   display: grid;
   /* SINGLE-COLUMN track list. Four rows because the two column wrappers go
      `display: contents` here (see the responsive block), so the grid's children
@@ -676,7 +683,9 @@
    -------------------------------------------------------------------------- */
 
 @media (min-width: 1240px) and (max-height: 900px) {
-  .hero__content { padding: calc(var(--nav-h, 76px) + 1.5vh) 32px 3vh; }
+  /* Still tighter than the base, but not 1.5vh — that was 11px of air under a
+     76px fixed header. */
+  .hero__content { padding: calc(var(--nav-h, 76px) + clamp(26px, 4.5vh, 48px)) 32px 4vh; }
   .hero__eyebrow { display: inline-flex; }
   /* The height-only block above compacts the panel rows to 9px, which was right
      when the stage was a full 100vh and everything had to fit. The stage is now

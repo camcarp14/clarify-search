@@ -41,18 +41,20 @@ const prefersReduced = () =>
  * ============================================================================
  */
 /**
- * `compact` drops the four per-row explanation sentences.
+ * `compact` hands the panel a class; Scorecard.css decides what it costs.
  *
- * In the hero this panel sits beside the SERP mock, and the two of them together
- * put 198 words and 31 coloured boxes above the fold — which reads as clutter no
- * matter how well each one is laid out on its own. Four of the six sentence
- * blocks up there were these notes. They are the report's detail, and detail is
- * what the actual deliverable is for; the hero needs the shape of the thing —
- * a score, a verdict, four graded lines — not its prose.
+ * It used to skip rendering the four per-row explanation sentences outright,
+ * because the panel then sat in a 650px column beside the SERP mock and the two
+ * together put 198 words above the fold. It does not sit there any more — it has
+ * its own full-width row and lays out as four columns, where the same four
+ * sentences are the difference between a report and a row of numbers with a lot
+ * of air around them.
  *
- * Omitted from the render, not hidden with CSS: hidden text still sits in the
- * accessibility tree and still gets read out, which would make the panel longer
- * to listen to than it is to look at.
+ * So the notes always render, and the narrow layouts drop them with
+ * `display: none` rather than by omission. That is not the compromise it looks
+ * like: `display: none` removes an element from the accessibility tree as
+ * completely as never rendering it, so a screen reader on a phone hears exactly
+ * what it heard before.
  */
 export default function ScorecardPanel({ delay = 0, compact = false }) {
   const [channel, setChannel] = useState('paid')
@@ -338,7 +340,7 @@ export default function ScorecardPanel({ delay = 0, compact = false }) {
                 <div className="sc__bar" aria-hidden="true">
                   <i className={`sc__bar-fill is-${r.lvl}`} data-bar />
                 </div>
-                {compact ? null : <p className="sc__row-note">{r.n}</p>}
+                <p className="sc__row-note">{r.n}</p>
               </li>
             ))}
           </ul>

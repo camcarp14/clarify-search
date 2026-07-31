@@ -339,13 +339,26 @@
   background: rgba(var(--mint-rgb), 0.1);
 }
 
-/* The rail linking the bought click to the one already owned. Sits in the
-   left gutter and grows downward. */
+/* THE RAIL linking the bought click to the one already owned.
+
+   `top` and `height` are set from the two rows' real offsets in Hero.jsx, not
+   here. They were `top: 26%; height: 30%` of the rows box — percentages tuned
+   against some earlier row layout, which by now put the rail's top edge inside
+   the AI ANSWER row and its bottom edge halfway down the SPONSORED one. It
+   connected neither of the two rows it names, so it read as a stray line beside
+   the row accents rather than as a link between them.
+
+   The arms are the other half of that fix. A bare 2px line 7px away from a
+   column of 3px row accents is one more vertical stroke in a stack of them; a
+   line with a short arm reaching into each of its two rows is a bracket, and a
+   bracket says which two things it is holding together. */
 .hero__serp-rail {
   position: absolute;
-  left: 10px;
-  top: 26%;
-  height: 30%;
+  left: 11px;
+  /* Fallback only — Hero.jsx overwrites both the moment the rows are measured,
+     and again on resize. */
+  top: 30%;
+  height: 34%;
   width: 2px;
   border-radius: 2px;
   background: linear-gradient(180deg, var(--red), var(--mint));
@@ -353,6 +366,19 @@
   transform-origin: top center;
   z-index: 3;
 }
+
+.hero__serp-rail::before,
+.hero__serp-rail::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  width: 9px;
+  height: 2px;
+  border-radius: 2px;
+  background: inherit;
+}
+.hero__serp-rail::before { top: 0; background: var(--red); }
+.hero__serp-rail::after { bottom: 0; background: var(--mint); }
 
 .hero.is-live .hero__serp-row,
 .hero.is-live .hero__serp-rail { will-change: transform, opacity; }

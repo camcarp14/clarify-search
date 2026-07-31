@@ -94,8 +94,41 @@ export default function Hero() {
             charsClass: 'hero__qchar',
           })
 
+          /* ---- the rail's geometry, measured rather than guessed ----
+           *
+           * It spans centre-of-paid-row to centre-of-owned-row, because those
+           * are the two rows it is claiming are the same click. Hero.css used
+           * to state that span as `top: 26%; height: 30%` of the rows box —
+           * percentages that were right for whatever the rows measured when
+           * they were written and wrong afterwards. The rows are three panels
+           * of wrapping copy; their heights move with the breakpoint, the
+           * font and the channel.
+           *
+           * offsetTop, not getBoundingClientRect: the rail is positioned
+           * against `.hero__serp-rows`, and offsetTop is already in that
+           * element's coordinate space. Rects would need the parent's rect
+           * subtracted and would be wrong mid-tween, while a transformed
+           * ancestor is animating. */
+          const placeRail = () => {
+            const rail = railRef.current
+            if (!rail || !paidRow || !ownedRow) return
+            const from = paidRow.offsetTop + paidRow.offsetHeight / 2
+            const to = ownedRow.offsetTop + ownedRow.offsetHeight / 2
+            rail.style.top = `${from}px`
+            rail.style.height = `${Math.max(to - from, 0)}px`
+          }
+          placeRail()
+
+          /* The rows reflow on any width change, not just at a breakpoint —
+           * a title rewrapping to a second line moves both anchors. matchMedia
+           * only re-runs this callback when a query flips, so it cannot be what
+           * keeps the rail attached. */
+          const ro = new ResizeObserver(placeRail)
+          ro.observe(panel)
+
           let detachReplay = null
           const cleanup = () => {
+            ro.disconnect()
             split.revert()
             qSplit.revert()
             if (detachReplay) detachReplay()

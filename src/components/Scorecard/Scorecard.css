@@ -381,8 +381,12 @@
     /* column-gap only. `gap` here would lose to `.sc--compact .sc__rows`, which
        is two class selectors and sits further down the file. */
     column-gap: 30px;
+    /* Under subgrid this is the gap between the title block, the bar and the
+       note — the cells' internal rhythm, set once on the parent because that is
+       where the shared tracks live. */
+    row-gap: 8px;
     align-content: center;
-    padding: 28px 0 28px 36px;
+    padding: 26px 0 26px 36px;
   }
   /* Bar pinned to the BOTTOM of its cell, title to the top.
      The four cells already stretch to a common height (grid's default
@@ -394,7 +398,50 @@
      title overflowed the floor.
 
      `isolation` is load-bearing, not decoration — see the hover tint below. */
-  .sc__row { grid-template-rows: 1fr auto; position: relative; isolation: isolate; }
+  .sc__row {
+    grid-template-rows: 1fr auto auto;
+    position: relative;
+    isolation: isolate;
+  }
+
+  /* SUBGRID, where it exists, because the fallback above only aligns the bars
+     when the notes happen to be the same height, and they are one sentence each
+     — four or five lines depending on the column width and the channel. Sharing
+     the parent's three row tracks aligns the titles, the bars AND the first line
+     of every note across all four columns, whatever any one of them wraps to.
+
+     The non-subgrid path is the `1fr auto auto` above: title absorbs the slack,
+     bar and note sit at the bottom. That is the same behaviour this had before
+     the notes came back, so an older engine loses the cross-column alignment of
+     the bars and nothing else. */
+  @supports (grid-template-rows: subgrid) {
+    .sc__rows { grid-template-rows: auto auto auto; }
+    .sc__row { grid-row: span 3; grid-template-rows: subgrid; }
+  }
+
+  /* THE FOUR SENTENCES, back.
+     They were dropped when this panel was a 650px column beside the SERP mock
+     and the fold could not carry the words. In four columns they are what the
+     cells were missing: a ~190x130 box holding a title, a figure and a 5px bar
+     reads as a number with a lot of air around it, and the air was the report's
+     own detail, cut. */
+  .sc--compact .sc__row-note {
+    display: block;
+    margin-top: 2px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--muted-2);
+    /* FOUR LINES RESERVED (6em = 4 x 1.5em at this size), and the reason is the
+       channel toggle. Paid's notes run 68-70 characters and set in four lines
+       here; organic's run 45-57 and set in three. Left to itself the note track
+       is 18px shorter on organic, so clicking the toggle resized the panel and
+       moved the whole page under the pointer — the same fault the 462px rail
+       exists to prevent on the mini-stat labels.
+
+       A floor rather than a fixed height: at the strip's narrowest the paid
+       notes need five lines, and this simply stops binding. */
+    min-height: 6em;
+  }
 
   /* A hairline between metrics, drawn INTO the 26px column gap rather than as a
      border on the cell. A border would sit at the cell's edge with the whole gap
@@ -477,6 +524,28 @@
      a 170px measure the default set two lines further apart than the 5px
      between a title and its grade. */
   .sc__row-title { line-height: 1.35; }
+}
+
+/* THE SAME FLOOR, FOR THE NARROW END OF THE STRIP.
+   Both of these exist only to keep the panel's height off the channel toggle,
+   and both are floors that bind on the shorter channel and never on the longer,
+   so neither adds a pixel to the view the page loads in.
+
+   The thresholds are type metrics, and are written down because they cannot be
+   read off the file: the four columns are ~130px at a 1176px panel and ~160px
+   at 1296px, and between those two widths "PMax & automation guardrails" moves
+   from three lines to two and paid's notes move from five to four. Organic's
+   copy is shorter and makes neither jump, so without a floor the panel is 19px
+   or 37px shorter on organic across this band. If the row copy or the type
+   scale changes, re-measure — a floor set to the wrong line count buys blank
+   space rather than stability. */
+@container sc-panel (min-width: 1100px) and (max-width: 1270px) {
+  /* 3 lines at the 1.35 line-height set above. */
+  .sc--compact .sc__row-title { min-height: 4.05em; }
+}
+@container sc-panel (min-width: 1100px) and (max-width: 1200px) {
+  /* 5 lines at 1.5. */
+  .sc--compact .sc__row-note { min-height: 7.5em; }
 }
 
 @media (max-width: 899px) {
@@ -574,9 +643,17 @@
    the fold feel cluttered.
    -------------------------------------------------------------------------- */
 
-/* row-gap, not gap. What this is tightening is vertical rhythm; the shorthand
-   also set a column gap, which is dead in every single-column layout but is the
-   one the instrument strip needs at 26px. */
-.sc--compact .sc__rows { row-gap: 15px; }
-.sc--compact .sc__row { gap: 7px; }
+/* Scoped to the layouts BELOW the instrument strip. Both of these are two class
+   selectors, so unscoped they outrank everything in the strip's container query
+   however that query is written — `row-gap` would have overridden the strip's
+   subgrid track spacing and `gap` its column gutter. The strip is the one place
+   these values are wrong. */
+@container sc-panel (max-width: 1099px) {
+  .sc--compact .sc__rows { row-gap: 15px; }
+  .sc--compact .sc__row { gap: 7px; }
+  /* No room for four sentences in one narrow column beside a 350px SERP mock —
+     the reason this variant exists. `display: none`, so they leave the
+     accessibility tree with the layout. */
+  .sc--compact .sc__row-note { display: none; }
+}
 .sc--compact .sc__foot { margin-top: 14px; padding-top: 12px; }
